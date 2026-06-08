@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { uploadDocument } = require('../controllers/docController');
+const { uploadDocument, getDocuments, getDocument } = require('../controllers/docController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 const storage = multer.diskStorage({
@@ -25,5 +25,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ storage, fileFilter });
 
 router.post('/upload', authMiddleware, upload.single('pdf'), uploadDocument);
+router.get('/', authMiddleware, getDocuments);
+router.get('/:id', authMiddleware, getDocument);
 
 module.exports = router;
