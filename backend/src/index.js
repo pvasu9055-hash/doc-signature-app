@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/authRoutes');
 const docRoutes = require('./routes/docRoutes');
+const signatureRoutes = require('./routes/signatureRoutes');
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/docs', docRoutes);
+app.use('/api/signatures', signatureRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Document Signature API is running 🚀' });

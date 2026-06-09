@@ -7,22 +7,37 @@ datasource db {
 }
 
 model User {
-  id        Int        @id @default(autoincrement())
-  name      String
-  email     String     @unique
-  password  String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  documents Document[]
+  id         Int         @id @default(autoincrement())
+  name       String
+  email      String      @unique
+  password   String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  documents  Document[]
+  signatures Signature[]
 }
 
 model Document {
-  id        Int      @id @default(autoincrement())
-  filename  String
-  filepath  String
-  mimetype  String
-  size      Int
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
+  id         Int         @id @default(autoincrement())
+  filename   String
+  filepath   String
+  mimetype   String
+  size       Int
+  userId     Int
+  user       User        @relation(fields: [userId], references: [id])
+  createdAt  DateTime    @default(now())
+  signatures Signature[]
+}
+
+model Signature {
+  id         Int      @id @default(autoincrement())
+  documentId Int
+  userId     Int
+  x          Float
+  y          Float
+  page       Int      @default(1)
+  status     String   @default("pending")
+  document   Document @relation(fields: [documentId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
 }
