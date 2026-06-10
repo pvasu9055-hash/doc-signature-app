@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getDocuments } from '../api';
 
-export default function Dashboard() {
+export default function Dashboard({ onOpenEditor }: { onOpenEditor: () => void }) {
   const [documents, setDocuments] = useState<any[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,6 @@ export default function Dashboard() {
               <p className="text-xs text-slate-500 font-medium">Digital Signatures</p>
             </div>
           </div>
-          
           <div className="flex items-center gap-4">
             <div className="relative hidden md:block">
               <input
@@ -75,11 +74,9 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-8 py-12">
         {/* Hero Section */}
         <div className="mb-12">
-          <h2 className="text-5xl font-black text-slate-900 mb-3">
-            My Documents
-          </h2>
+          <h2 className="text-5xl font-black text-slate-900 mb-3">My Documents</h2>
           <p className="text-lg text-slate-600 max-w-2xl">
-            Manage, organize, and securely sign all your documents in one place. Keep everything organized and accessible.
+            Manage, organize, and securely sign all your documents in one place.
           </p>
         </div>
 
@@ -90,19 +87,16 @@ export default function Dashboard() {
             <p className="text-4xl font-black text-slate-900">{documents.length}</p>
             <p className="text-xs text-slate-500 mt-2">All uploads</p>
           </div>
-
           <div className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md transition">
             <p className="text-slate-600 text-sm font-medium mb-2">Pending</p>
             <p className="text-4xl font-black text-orange-600">0</p>
             <p className="text-xs text-slate-500 mt-2">Need signatures</p>
           </div>
-
           <div className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md transition">
             <p className="text-slate-600 text-sm font-medium mb-2">Completed</p>
             <p className="text-4xl font-black text-emerald-600">0</p>
             <p className="text-xs text-slate-500 mt-2">Fully signed</p>
           </div>
-
           <div className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md transition">
             <p className="text-slate-600 text-sm font-medium mb-2">This Month</p>
             <p className="text-4xl font-black text-blue-600">0</p>
@@ -117,7 +111,7 @@ export default function Dashboard() {
           </div>
           <h3 className="text-2xl font-bold text-slate-900 mb-2">Upload Documents</h3>
           <p className="text-slate-600 mb-8 max-w-sm mx-auto">
-            Drag and drop your PDF files here, or click the button below to select files from your computer.
+            Drag and drop your PDF files here, or click the button below.
           </p>
           <button className="px-10 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-orange-500/30 transition transform hover:scale-105">
             Select Files to Upload
@@ -135,12 +129,8 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex gap-2">
-              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
-                Sort
-              </button>
-              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
-                Filter
-              </button>
+              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">Sort</button>
+              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">Filter</button>
             </div>
           </div>
 
@@ -158,7 +148,7 @@ export default function Dashboard() {
               </div>
               <h4 className="text-2xl font-bold text-slate-900 mb-2">No Documents Yet</h4>
               <p className="text-slate-600 mb-8 max-w-sm mx-auto">
-                Start by uploading your first PDF document to get organized and begin signing.
+                Start by uploading your first PDF document.
               </p>
               <button className="px-10 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-orange-500/30 transition transform hover:scale-105">
                 Upload Your First Document
@@ -180,15 +170,11 @@ export default function Dashboard() {
                     <div className="flex items-start gap-4 flex-1">
                       <div className="text-4xl">📄</div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-lg text-slate-900 truncate hover:text-orange-600 transition">
-                          {doc.filename}
-                        </h4>
+                        <h4 className="font-bold text-lg text-slate-900 truncate">{doc.filename}</h4>
                         <div className="flex gap-6 mt-2 text-sm text-slate-600">
                           <span>📊 {formatFileSize(doc.size)}</span>
                           <span>📅 {formatDate(doc.createdAt)}</span>
-                          <span className="font-medium text-yellow-600 bg-yellow-50 px-3 py-1 rounded-full text-xs">
-                            ⏳ Pending Review
-                          </span>
+                          <span className="font-medium text-yellow-600 bg-yellow-50 px-3 py-1 rounded-full text-xs">⏳ Pending Review</span>
                         </div>
                       </div>
                     </div>
@@ -196,12 +182,13 @@ export default function Dashboard() {
                       <button className="px-4 py-2 bg-slate-100 text-slate-700 text-sm rounded-lg hover:bg-slate-200 transition font-medium">
                         View
                       </button>
-                      <button className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white text-sm rounded-lg hover:shadow-lg hover:shadow-orange-500/30 transition font-medium">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onOpenEditor(); }}
+                        className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white text-sm rounded-lg hover:shadow-lg hover:shadow-orange-500/30 transition font-medium">
                         Sign
                       </button>
                     </div>
                   </div>
-
                   {selectedDoc?.id === doc.id && (
                     <div className="mt-6 pt-6 border-t border-orange-200 grid grid-cols-2 md:grid-cols-5 gap-4">
                       <div>
@@ -222,9 +209,7 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <p className="text-xs text-slate-600 font-semibold uppercase">Actions</p>
-                        <button className="text-sm font-bold text-orange-600 mt-1 hover:text-orange-700">
-                          Download →
-                        </button>
+                        <button className="text-sm font-bold text-orange-600 mt-1 hover:text-orange-700">Download →</button>
                       </div>
                     </div>
                   )}
@@ -237,7 +222,7 @@ export default function Dashboard() {
         {/* Footer Info */}
         <div className="mt-12 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl p-6 text-center">
           <p className="text-slate-700">
-            <span className="font-bold text-orange-600">💡 Pro Tip:</span> Your documents are automatically saved and organized. Use the search bar to quickly find any document.
+            <span className="font-bold text-orange-600">💡 Pro Tip:</span> Your documents are automatically saved and organized.
           </p>
         </div>
       </main>
