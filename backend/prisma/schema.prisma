@@ -16,6 +16,7 @@ model User {
   updatedAt  DateTime    @updatedAt
   documents  Document[]
   signatures Signature[]
+  auditLogs  AuditLog[]
 }
 
 model Document {
@@ -28,6 +29,7 @@ model Document {
   user       User        @relation(fields: [userId], references: [id])
   createdAt  DateTime    @default(now())
   signatures Signature[]
+  auditLogs  AuditLog[]
 }
 
 model Signature {
@@ -41,4 +43,15 @@ model Signature {
   document   Document @relation(fields: [documentId], references: [id])
   user       User     @relation(fields: [userId], references: [id])
   createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  documentId Int
+  userId     Int
+  action     String
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
 }
