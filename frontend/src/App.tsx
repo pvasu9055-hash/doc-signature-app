@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
-import PDFEditor from './components/PDFEditor';
+import SignPage from './components/SignPage';
 import Login from './components/Login';
 import Register from './components/Register';
 
 function App() {
-  const [view, setView] = useState<'login' | 'register' | 'dashboard' | 'editor'>('login');
+  const [view, setView] = useState<'login' | 'register' | 'dashboard' | 'sign'>('login');
+  const [currentDocId, setCurrentDocId] = useState<number>(1);
+  const [currentDocPath, setCurrentDocPath] = useState<string>('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      setView('dashboard');
-    }
+    if (token) setView('dashboard');
   }, []);
 
   const handleLogin = () => setView('dashboard');
@@ -21,40 +21,29 @@ function App() {
     localStorage.removeItem('user');
     setView('login');
   };
+  const handleOpenEditor = (docId: number, filepath: string) => {
+    setCurrentDocId(docId);
+    setCurrentDocPath(filepath);
+    setView('sign');
+  };
 
   return (
     <>
       {view === 'login' && (
-        <Login
-          onLogin={handleLogin}
-          onSwitchToRegister={() => setView('register')}
-        />
+        <Login onLogin={handleLogin} onSwitchToRegister={() => setView('register')} />
       )}
       {view === 'register' && (
-        <Register
-          onRegister={handleRegister}
-          onSwitchToLogin={() => setView('login')}
-        />
+        <Register onRegister={handleRegister} onSwitchToLogin={() => setView('login')} />
       )}
       {view === 'dashboard' && (
-        <Dashboard
-          onOpenEditor={() => setView('editor')}
-          onLogout={handleLogout}
-        />
+        <Dashboard onOpenEditor={handleOpenEditor} onLogout={handleLogout} />
       )}
-      {view === 'editor' && (
-        <div>
-          <button
-            onClick={() => setView('dashboard')}
-            className="fixed top-4 left-4 z-50 bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition"
-          >
-            ← Back
-          </button>
-          <PDFEditor
-            documentId={1}
-            onSave={() => setView('dashboard')}
-          />
-        </div>
+      {view === 'sign' && (
+        <SignPage
+          documentId={currentDocId}
+          filepath={currentDocPath}
+          onBack={() => setView('dashboard')}
+        />
       )}
     </>
   );

@@ -25,6 +25,7 @@ model Document {
   filepath   String
   mimetype   String
   size       Int
+  status     String      @default("pending")
   userId     Int
   user       User        @relation(fields: [userId], references: [id])
   createdAt  DateTime    @default(now())
