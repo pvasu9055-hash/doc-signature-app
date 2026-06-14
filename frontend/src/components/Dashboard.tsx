@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getDocuments, uploadDocument } from '../api';
+import ShareModal from './ShareModal';
 
 export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (docId: number, filepath: string) => void, onLogout: () => void }) {
   const [documents, setDocuments] = useState<any[]>([]);
@@ -8,6 +9,11 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [activePage, setActivePage] = useState('dashboard');
+  const [shareDoc, setShareDoc] = useState<any>(null);
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem('appSettings');
+    return saved ? JSON.parse(saved) : { emailNotifs: true, darkMode: true, autoSave: true, twoFA: false };
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -22,6 +28,12 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleSetting = (key: string) => {
+    const updated = { ...settings, [key]: !settings[key] };
+    setSettings(updated);
+    localStorage.setItem('appSettings', JSON.stringify(updated));
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,8 +56,9 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
 
   const filteredDocs = documents.filter(doc => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'pending') return true;
-if (activeTab === 'signed') return true;
+    if (activeTab === 'pending') return doc.status !== 'signed' && doc.status !== 'rejected';
+    if (activeTab === 'signed') return doc.status === 'signed';
+    if (activeTab === 'rejected') return doc.status === 'rejected';
     return true;
   });
 
@@ -201,10 +214,19 @@ if (activeTab === 'signed') return true;
             <div className="max-w-lg">
               <h1 className="text-3xl font-black mb-8">⚙️ Settings</h1>
               <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
-                {['Email Notifications', 'Dark Mode', 'Auto-save Signatures', 'Two-Factor Auth'].map((s) => (
-                  <div key={s} className="flex justify-between items-center p-4 bg-white/5 rounded-xl">
-                    <span className="text-white text-sm font-medium">{s}</span>
-                    <div className="w-10 h-5 bg-orange-500 rounded-full cursor-pointer"></div>
+                {[
+                  { key: 'emailNotifs', label: 'Email Notifications' },
+                  { key: 'darkMode', label: 'Dark Mode' },
+                  { key: 'autoSave', label: 'Auto-save Signatures' },
+                  { key: 'twoFA', label: 'Two-Factor Auth' }
+                ].map((s) => (
+                  <div key={s.key} className="flex justify-between items-center p-4 bg-white/5 rounded-xl">
+                    <span className="text-white text-sm font-medium">{s.label}</span>
+                    <div
+                      onClick={() => toggleSetting(s.key)}
+                      className={`w-10 h-5 rounded-full cursor-pointer transition ${
+                        settings[s.key as keyof typeof settings] ? 'bg-orange-500' : 'bg-slate-600'
+                      }`}></div>
                   </div>
                 ))}
               </div>
@@ -224,7 +246,9 @@ if (activeTab === 'signed') return true;
                         <p className="text-white text-sm font-semibold">{doc.filename}</p>
                         <p className="text-slate-400 text-xs">Uploaded on {formatDate(doc.createdAt)}</p>
                       </div>
-                      <span className="text-yellow-400 text-xs bg-yellow-400/10 px-2 py-1 rounded-full">⏳ Pending</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${doc.status === 'signed' ? 'text-emerald-400 bg-emerald-400/10' : doc.status === 'rejected' ? 'text-red-400 bg-red-400/10' : 'text-yellow-400 bg-yellow-400/10'}`}>
+                        {doc.status === 'signed' ? '✅ Signed' : doc.status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
+                      </span>
                     </div>
                   ))}
                   {documents.length === 0 && <p className="text-slate-400 text-center py-8">No audit logs yet</p>}
@@ -236,7 +260,6 @@ if (activeTab === 'signed') return true;
           {/* Dashboard & Documents Page */}
           {(activePage === 'dashboard' || activePage === 'documents' || activePage === 'shared' || activePage === 'notifications') && (
             <>
-              {/* Header */}
               <div className="mb-8">
                 <h1 className="text-4xl font-black tracking-tight mb-1">
                   Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400">{user.name || 'User'}</span> 👋
@@ -248,9 +271,9 @@ if (activeTab === 'signed') return true;
               <div className="grid grid-cols-4 gap-4 mb-8">
                 {[
                   { label: 'Total Documents', value: documents.length, icon: '📄', color: 'from-blue-500/20 to-blue-500/5', border: 'border-blue-500/20', text: 'text-blue-400', sub: 'All uploads' },
-                  { label: 'Pending', value: documents.filter(d => d.status !== 'signed').length, icon: '⏳', color: 'from-orange-500/20 to-orange-500/5', border: 'border-orange-500/20', text: 'text-orange-400', sub: 'Need signatures' },
+                  { label: 'Pending', value: documents.filter(d => d.status !== 'signed' && d.status !== 'rejected').length, icon: '⏳', color: 'from-orange-500/20 to-orange-500/5', border: 'border-orange-500/20', text: 'text-orange-400', sub: 'Need signatures' },
                   { label: 'Completed', value: documents.filter(d => d.status === 'signed').length, icon: '✅', color: 'from-emerald-500/20 to-emerald-500/5', border: 'border-emerald-500/20', text: 'text-emerald-400', sub: 'Fully signed' },
-                  { label: 'This Month', value: documents.filter(d => new Date(d.createdAt).getMonth() === new Date().getMonth()).length, icon: '📅', color: 'from-purple-500/20 to-purple-500/5', border: 'border-purple-500/20', text: 'text-purple-400', sub: 'New uploads' },
+                  { label: 'Rejected', value: documents.filter(d => d.status === 'rejected').length, icon: '❌', color: 'from-red-500/20 to-red-500/5', border: 'border-red-500/20', text: 'text-red-400', sub: 'Rejected docs' },
                 ].map((s) => (
                   <div key={s.label} className={`bg-gradient-to-br ${s.color} border ${s.border} rounded-2xl p-5 hover:scale-[1.02] transition cursor-pointer`}>
                     <div className="flex justify-between items-start mb-3">
@@ -284,7 +307,15 @@ if (activeTab === 'signed') return true;
                   <h3 className="text-white font-bold mt-3">Sign Document</h3>
                   <p className="text-slate-400 text-sm mt-1">{selectedDoc ? `Sign: ${selectedDoc.filename.slice(0, 20)}...` : 'Click to sign latest doc'}</p>
                 </div>
-                <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/20 rounded-2xl p-5 cursor-pointer hover:scale-[1.02] transition">
+                <div
+                  onClick={() => {
+                    if (documents.length > 0) {
+                      setShareDoc(selectedDoc || documents[0]);
+                    } else {
+                      alert('Please upload a document first!');
+                    }
+                  }}
+                  className="bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/20 rounded-2xl p-5 cursor-pointer hover:scale-[1.02] transition">
                   <span className="text-3xl">🔗</span>
                   <h3 className="text-white font-bold mt-3">Share Link</h3>
                   <p className="text-slate-400 text-sm mt-1">Send signing request</p>
@@ -299,7 +330,7 @@ if (activeTab === 'signed') return true;
                     <p className="text-slate-500 text-sm">{documents.length} total</p>
                   </div>
                   <div className="flex gap-2">
-                    {['all', 'pending', 'signed'].map((tab) => (
+                    {['all', 'pending', 'signed', 'rejected'].map((tab) => (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -340,8 +371,8 @@ if (activeTab === 'signed') return true;
                                 <span>•</span>
                                 <span>{formatDate(doc.createdAt)}</span>
                                 <span>•</span>
-                                <span className={doc.status === 'signed' ? 'text-emerald-400' : 'text-yellow-400'}>
-                                  {doc.status === 'signed' ? '✅ Signed' : '⏳ Pending'}
+                                <span className={doc.status === 'signed' ? 'text-emerald-400' : doc.status === 'rejected' ? 'text-red-400' : 'text-yellow-400'}>
+                                  {doc.status === 'signed' ? '✅ Signed' : doc.status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
                                 </span>
                               </div>
                             </div>
@@ -356,7 +387,7 @@ if (activeTab === 'signed') return true;
                               ✍️ Sign
                             </button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`http://localhost:5173/sign/${doc.id}`); alert('🔗 Link copied!'); }}
+                              onClick={(e) => { e.stopPropagation(); setShareDoc(doc); }}
                               className="bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-white/20 transition">🔗 Share</button>
                             <button
                               onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:5000/${doc.filepath}`, '_blank'); }}
@@ -372,6 +403,15 @@ if (activeTab === 'signed') return true;
           )}
         </main>
       </div>
+
+      {/* Share Modal */}
+      {shareDoc && (
+        <ShareModal
+          documentId={shareDoc.id}
+          filename={shareDoc.filename}
+          onClose={() => setShareDoc(null)}
+        />
+      )}
     </div>
   );
 }

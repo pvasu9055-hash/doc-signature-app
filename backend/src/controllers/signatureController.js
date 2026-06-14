@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 const saveSignature = async (req, res) => {
   try {
-    const { documentId, x, y, page, status } = req.body;
+    const { documentId, x, y, page, status, reason, signatureImage } = req.body;
 
     const document = await prisma.document.findFirst({
       where: { id: parseInt(documentId) }
@@ -22,11 +22,12 @@ const saveSignature = async (req, res) => {
         x: parseFloat(x),
         y: parseFloat(y),
         page: parseInt(page) || 1,
-        status: status || 'pending'
+        status: status || 'pending',
+        reason: reason || null,
+        signatureImage: signatureImage || null
       }
     });
 
-    // Update document status
     await prisma.document.update({
       where: { id: parseInt(documentId) },
       data: { status: status || 'pending' }
@@ -44,6 +45,17 @@ const getSignatures = async (req, res) => {
       where: { documentId: parseInt(req.params.id) }
     });
     res.json({ signatures });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+const deleteSignatures = async (req, res) => {
+  try {
+    await prisma.signature.deleteMany({
+      where: { documentId: parseInt(req.params.id) }
+    });
+    res.json({ message: 'Old signatures cleared' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -68,20 +80,61 @@ const finalizeSignature = async (req, res) => {
       where: { documentId: parseInt(documentId) }
     });
 
+    console.log('📋 Found', signatures.length, 'signatures to embed');
+
     const pdfPath = path.resolve(document.filepath);
     const pdfBytes = fs.readFileSync(pdfPath);
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
+    const RENDER_WIDTH = 900;
+
     for (const sig of signatures) {
       const pages = pdfDoc.getPages();
       const page = pages[(sig.page - 1)] || pages[0];
-      const { height } = page.getSize();
+      const { width, height } = page.getSize();
 
-      page.drawText(`✍ ${signerName || 'Signed'}`, {
-        x: sig.x, y: height - sig.y,
-        size: 14, font, color: rgb(0, 0, 0.8),
-      });
+      const scale = width / RENDER_WIDTH;
+      const pdfX = sig.x * scale;
+      const pdfY = height - (sig.y * scale);
+
+      console.log(`🖋️ Embedding signature ${sig.id} at (${Math.round(pdfX)}, ${Math.round(pdfY)})`);
+      console.log(`   Has image: ${sig.signatureImage ? 'YES (length: ' + sig.signatureImage.length + ')' : 'NO'}`);
+
+      // Check each signature's own image field
+      if (sig.signatureImage && sig.signatureImage.startsWith('data:image/png')) {
+        try {
+          const base64Data = sig.signatureImage.replace(/^data:image\/png;base64,/, '');
+          const imageBytes = Buffer.from(base64Data, 'base64');
+          const embeddedImage = await pdfDoc.embedPng(imageBytes);
+          
+          const imgHeight = 40;
+          const imgWidth = (embeddedImage.width / embeddedImage.height) * imgHeight;
+          
+          page.drawImage(embeddedImage, {
+            x: pdfX,
+            y: pdfY - imgHeight,
+            width: imgWidth,
+            height: imgHeight,
+          });
+          console.log(`   ✅ Image embedded successfully`);
+        } catch (imgError) {
+          console.error(`   ❌ Image embed error:`, imgError.message);
+          // Fallback to text
+          page.drawText(`Signed by: ${signerName || 'Signed'}`, {
+            x: pdfX, y: pdfY,
+            size: 14, font, color: rgb(0, 0, 0.8),
+          });
+          console.log(`   ⚠️  Fell back to text signature`);
+        }
+      } else {
+        // No image for this signature, use text
+        page.drawText(`Signed by: ${signerName || 'Signed'}`, {
+          x: pdfX, y: pdfY,
+          size: 14, font, color: rgb(0, 0, 0.8),
+        });
+        console.log(`   📝 Using text signature (no image)`);
+      }
     }
 
     const signedPdfBytes = await pdfDoc.save();
@@ -94,10 +147,12 @@ const finalizeSignature = async (req, res) => {
       data: { status: 'signed' }
     });
 
+    console.log('✅ PDF signed and saved:', signedPath);
     res.json({ message: 'PDF signed!', signedFile: signedPath });
   } catch (error) {
+    console.error('❌ Finalize error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-module.exports = { saveSignature, getSignatures, finalizeSignature };
+module.exports = { saveSignature, getSignatures, deleteSignatures, finalizeSignature };

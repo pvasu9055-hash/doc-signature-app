@@ -34,13 +34,15 @@ model Document {
 }
 
 model Signature {
-  id         Int      @id @default(autoincrement())
+  id               Int      @id @default(autoincrement())
   documentId Int
   userId     Int
   x          Float
   y          Float
   page       Int      @default(1)
   status     String   @default("pending")
+  reason     String?
+  signatureImage   String?  @db.Text
   document   Document @relation(fields: [documentId], references: [id])
   user       User     @relation(fields: [userId], references: [id])
   createdAt  DateTime @default(now())

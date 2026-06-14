@@ -20,48 +20,49 @@ const generateSigningLink = async (req, res) => {
     // Generate unique token
     const token = uuidv4();
 
-    // Save token to signature
-    await prisma.signature.updateMany({
-      where: { documentId: parseInt(documentId) },
-      data: { status: 'pending' }
-    });
-
     const signingLink = `${process.env.FRONTEND_URL}/sign/${token}?docId=${documentId}`;
 
-    // Send email
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      }
-    });
+    // Try to send email, fallback to mock
+    try {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        }
+      });
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: signerEmail,
-      subject: `Document Signing Request - ${document.filename}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">Document Signing Request</h2>
-          <p>Hello <strong>${signerName}</strong>,</p>
-          <p>You have been requested to sign the document: <strong>${document.filename}</strong></p>
-          <div style="margin: 30px 0;">
-            <a href="${signingLink}" 
-               style="background: #2563eb; color: white; padding: 12px 24px; 
-                      border-radius: 8px; text-decoration: none; font-weight: bold;">
-              Click Here to Sign Document
-            </a>
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: signerEmail,
+        subject: `Document Signing Request - ${document.filename}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #f97316;">Document Signing Request</h2>
+            <p>Hello <strong>${signerName}</strong>,</p>
+            <p>You have been requested to sign: <strong>${document.filename}</strong></p>
+            <div style="margin: 30px 0;">
+              <a href="${signingLink}" 
+                 style="background: #f97316; color: white; padding: 12px 24px; 
+                        border-radius: 8px; text-decoration: none; font-weight: bold;">
+                Click Here to Sign Document
+              </a>
+            </div>
+            <p style="color: #666; font-size: 12px;">This link is unique and secure.</p>
           </div>
-          <p style="color: #666; font-size: 12px;">This link is unique and secure.</p>
-        </div>
-      `
-    };
+        `
+      };
 
-    await transporter.sendMail(mailOptions);
+      await transporter.sendMail(mailOptions);
+      console.log('📧 Email sent to:', signerEmail);
+    } catch (emailError) {
+      // Mock email if credentials not set
+      console.log('📧 Mock email - would be sent to:', signerEmail);
+      console.log('📧 Signing Link:', signingLink);
+    }
 
     res.json({
-      message: 'Signing link sent successfully!',
+      message: 'Signing link generated successfully!',
       signingLink,
       token
     });

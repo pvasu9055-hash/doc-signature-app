@@ -5,8 +5,10 @@ import type { DragEndEvent } from '@dnd-kit/core';
 import axios from 'axios';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+import SignatureCanvasModal from './SignatureCanvas';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
 interface Signature {
   id: string;
   x: number;
@@ -50,6 +52,8 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
   const [status, setStatus] = useState<'pending' | 'signed' | 'rejected'>('pending');
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showSignatureCanvas, setShowSignatureCanvas] = useState(false);
+  const [drawnSignatureImage, setDrawnSignatureImage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const pdfUrl = `http://localhost:5000/${filepath}`;
@@ -78,21 +82,69 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
     setSignatures(signatures.filter(s => s.id !== id));
   };
 
+  const handleSignatureCanvasSave = (dataUrl: string) => {
+    setDrawnSignatureImage(dataUrl);
+    setShowSignatureCanvas(false);
+    const newSig = {
+      id: `sig-canvas-${Date.now()}`,
+      x: 150,
+      y: 150,
+      page: 1
+    };
+    setSignatures([...signatures, newSig]);
+    alert('✅ Signature added! Drag it to position on the PDF, then click Sign & Save');
+  };
+
   const handleSave = async (finalStatus: 'signed' | 'rejected') => {
     try {
       setSaving(true);
       const token = localStorage.getItem('token');
-      for (const sig of signatures) {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+      // Clear old signatures for this document before saving new ones
+      await axios.delete(`http://localhost:5000/api/signatures/${documentId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (signatures.length > 0) {
+        for (const sig of signatures) {
+          await axios.post('http://localhost:5000/api/signatures', {
+            documentId,
+            x: sig.x,
+            y: sig.y,
+            page: sig.page,
+            status: finalStatus,
+            reason: finalStatus === 'rejected' ? rejectReason : null,
+            signatureImage: sig.id.includes('canvas') ? drawnSignatureImage : null
+          }, { headers: { Authorization: `Bearer ${token}` } });
+        }
+      } else {
+        // No signature placed - still record status (e.g. reject without placing anything)
         await axios.post('http://localhost:5000/api/signatures', {
           documentId,
-          x: sig.x,
-          y: sig.y,
-          page: sig.page,
-          status: finalStatus
+          x: 0,
+          y: 0,
+          page: 1,
+          status: finalStatus,
+          reason: finalStatus === 'rejected' ? rejectReason : null
         }, { headers: { Authorization: `Bearer ${token}` } });
       }
+
+      // Finalize - embed signature into PDF
+      if (finalStatus === 'signed' && signatures.length > 0) {
+        const finalizeRes = await axios.post('http://localhost:5000/api/signatures/finalize', {
+          documentId,
+          signerName: user.name || 'Signed',
+          signatureImage: drawnSignatureImage
+        }, { headers: { Authorization: `Bearer ${token}` } });
+
+        // Open signed PDF
+        const signedFileUrl = `http://localhost:5000/${finalizeRes.data.signedFile}`;
+        window.open(signedFileUrl, '_blank');
+      }
+
       setStatus(finalStatus);
-      alert(finalStatus === 'signed' ? '✅ Document signed successfully!' : '❌ Document rejected!');
+      alert(finalStatus === 'signed' ? '✅ Document signed & PDF generated!' : '❌ Document rejected!');
       onBack();
     } catch (error) {
       alert('❌ Failed to save!');
@@ -119,6 +171,11 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
           <div className="flex gap-3">
             <button onClick={() => setSignatures([])} className="bg-white/10 text-white px-4 py-2 rounded-xl hover:bg-white/20 transition">
               🗑️ Clear
+            </button>
+            <button 
+              onClick={() => setShowSignatureCanvas(true)} 
+              className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-4 py-2 rounded-xl hover:bg-blue-500/30 transition">
+              ✏️ Draw Signature
             </button>
             <button
               onClick={() => setShowRejectModal(true)}
@@ -187,6 +244,13 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
           </div>
         )}
       </div>
+
+      {showSignatureCanvas && (
+        <SignatureCanvasModal
+          onSave={handleSignatureCanvasSave}
+          onClose={() => setShowSignatureCanvas(false)}
+        />
+      )}
 
       {/* Reject Modal */}
       {showRejectModal && (
