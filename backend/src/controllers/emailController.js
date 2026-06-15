@@ -32,15 +32,19 @@ const generateSigningLink = async (req, res) => {
         }
       });
 
+      const senderName = req.user.name || 'DocSign User';
+      const senderEmail = req.user.email || process.env.EMAIL_USER;
+
       const mailOptions = {
-        from: process.env.EMAIL_USER,
+        from: `"${senderName} (via DocSign)" <${process.env.EMAIL_USER}>`,
+        replyTo: senderEmail,
         to: signerEmail,
         subject: `Document Signing Request - ${document.filename}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #f97316;">Document Signing Request</h2>
             <p>Hello <strong>${signerName}</strong>,</p>
-            <p>You have been requested to sign: <strong>${document.filename}</strong></p>
+            <p><strong>${senderName}</strong> (${senderEmail}) has requested you to sign: <strong>${document.filename}</strong></p>
             <div style="margin: 30px 0;">
               <a href="${signingLink}" 
                  style="background: #f97316; color: white; padding: 12px 24px; 
@@ -48,13 +52,13 @@ const generateSigningLink = async (req, res) => {
                 Click Here to Sign Document
               </a>
             </div>
-            <p style="color: #666; font-size: 12px;">This link is unique and secure.</p>
+            <p style="color: #666; font-size: 12px;">This link is unique and secure. Reply to this email to contact ${senderName} directly.</p>
           </div>
         `
       };
 
       await transporter.sendMail(mailOptions);
-      console.log('📧 Email sent to:', signerEmail);
+      console.log('📧 Email sent to:', signerEmail, 'on behalf of', senderName);
     } catch (emailError) {
       // Mock email if credentials not set
       console.log('📧 Mock email - would be sent to:', signerEmail);

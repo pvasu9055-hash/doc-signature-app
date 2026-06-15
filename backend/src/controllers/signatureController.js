@@ -95,22 +95,23 @@ const finalizeSignature = async (req, res) => {
       const { width, height } = page.getSize();
 
       const scale = width / RENDER_WIDTH;
-      const pdfX = sig.x * scale;
-      const pdfY = height - (sig.y * scale);
+
+      const pdfX = Math.max(0, Math.min(sig.x * scale, width - 150));
+      let pdfY = height - (sig.y * scale);
+      pdfY = Math.max(20, Math.min(pdfY, height - 50));
 
       console.log(`🖋️ Embedding signature ${sig.id} at (${Math.round(pdfX)}, ${Math.round(pdfY)})`);
       console.log(`   Has image: ${sig.signatureImage ? 'YES (length: ' + sig.signatureImage.length + ')' : 'NO'}`);
 
-      // Check each signature's own image field
       if (sig.signatureImage && sig.signatureImage.startsWith('data:image/png')) {
         try {
           const base64Data = sig.signatureImage.replace(/^data:image\/png;base64,/, '');
           const imageBytes = Buffer.from(base64Data, 'base64');
           const embeddedImage = await pdfDoc.embedPng(imageBytes);
-          
+
           const imgHeight = 40;
           const imgWidth = (embeddedImage.width / embeddedImage.height) * imgHeight;
-          
+
           page.drawImage(embeddedImage, {
             x: pdfX,
             y: pdfY - imgHeight,
@@ -120,7 +121,6 @@ const finalizeSignature = async (req, res) => {
           console.log(`   ✅ Image embedded successfully`);
         } catch (imgError) {
           console.error(`   ❌ Image embed error:`, imgError.message);
-          // Fallback to text
           page.drawText(`Signed by: ${signerName || 'Signed'}`, {
             x: pdfX, y: pdfY,
             size: 14, font, color: rgb(0, 0, 0.8),
@@ -128,7 +128,6 @@ const finalizeSignature = async (req, res) => {
           console.log(`   ⚠️  Fell back to text signature`);
         }
       } else {
-        // No image for this signature, use text
         page.drawText(`Signed by: ${signerName || 'Signed'}`, {
           x: pdfX, y: pdfY,
           size: 14, font, color: rgb(0, 0, 0.8),

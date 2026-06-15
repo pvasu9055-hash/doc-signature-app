@@ -9,6 +9,9 @@ import SignatureCanvasModal from './SignatureCanvas';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
+const RENDER_WIDTH = 900;
+const PAGE_GAP = 8; // gap between pages in react-pdf rendering
+
 interface Signature {
   id: string;
   x: number;
@@ -48,6 +51,7 @@ function DraggableSignature({ sig, index, onRemove }: { sig: Signature, index: n
 export default function SignPage({ documentId, filepath, onBack }: Props) {
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [numPages, setNumPages] = useState<number>(1);
+  const [pageHeight, setPageHeight] = useState<number>(1165);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<'pending' | 'signed' | 'rejected'>('pending');
   const [rejectReason, setRejectReason] = useState('');
@@ -58,24 +62,48 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
 
   const pdfUrl = `http://localhost:5000/${filepath}`;
 
+  const handlePageLoadSuccess = (page: any) => {
+    if (page.originalWidth && page.originalHeight) {
+      const renderedHeight = (page.originalHeight / page.originalWidth) * RENDER_WIDTH;
+      setPageHeight(renderedHeight);
+    }
+  };
+
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    if (!rect || !containerRef.current) return;
+
+    const scrollTop = containerRef.current.scrollTop;
+    const absoluteY = (e.clientY - rect.top) + scrollTop;
     const x = e.clientX - rect.left - 60;
-    const y = e.clientY - rect.top - 20;
+
+    const slot = pageHeight + PAGE_GAP;
+    const pageIndex = Math.floor(absoluteY / slot);
+    const yWithinPage = absoluteY - (pageIndex * slot);
+
+    const pageNum = Math.min(Math.max(pageIndex + 1, 1), numPages);
+
     setSignatures([...signatures, {
       id: `sig-${Date.now()}`,
-      x, y, page: 1
+      x,
+      y: yWithinPage - 20,
+      page: pageNum
     }]);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, delta } = event;
-    setSignatures(sigs => sigs.map(s =>
-      s.id === active.id
-        ? { ...s, x: s.x + delta.x, y: s.y + delta.y }
-        : s
-    ));
+    setSignatures(sigs => sigs.map(s => {
+      if (s.id !== active.id) return s;
+
+      const newAbsoluteY = (s.page - 1) * (pageHeight + PAGE_GAP) + s.y + delta.y;
+      const slot = pageHeight + PAGE_GAP;
+      const newPageIndex = Math.floor(newAbsoluteY / slot);
+      const newPageNum = Math.min(Math.max(newPageIndex + 1, 1), numPages);
+      const newYWithinPage = newAbsoluteY - (newPageIndex * slot);
+
+      return { ...s, x: s.x + delta.x, y: newYWithinPage, page: newPageNum };
+    }));
   };
 
   const removeSignature = (id: string) => {
@@ -119,7 +147,6 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
           }, { headers: { Authorization: `Bearer ${token}` } });
         }
       } else {
-        // No signature placed - still record status (e.g. reject without placing anything)
         await axios.post('http://localhost:5000/api/signatures', {
           documentId,
           x: 0,
@@ -130,7 +157,6 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
         }, { headers: { Authorization: `Bearer ${token}` } });
       }
 
-      // Finalize - embed signature into PDF
       if (finalStatus === 'signed' && signatures.length > 0) {
         const finalizeRes = await axios.post('http://localhost:5000/api/signatures/finalize', {
           documentId,
@@ -138,7 +164,6 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
           signatureImage: drawnSignatureImage
         }, { headers: { Authorization: `Bearer ${token}` } });
 
-        // Open signed PDF
         const signedFileUrl = `http://localhost:5000/${finalizeRes.data.signedFile}`;
         window.open(signedFileUrl, '_blank');
       }
@@ -198,6 +223,11 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
               {s === 'pending' ? '⏳' : s === 'signed' ? '✅' : '❌'} {s}
             </div>
           ))}
+          {numPages > 1 && (
+            <div className="px-4 py-1.5 rounded-full text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+              📄 {numPages} pages
+            </div>
+          )}
         </div>
 
         {/* PDF + Signature Canvas */}
@@ -213,18 +243,28 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
               onLoadSuccess={({ numPages }) => setNumPages(numPages)}
               className="w-full">
               {Array.from({ length: numPages }, (_, i) => (
-                <Page key={i + 1} pageNumber={i + 1} width={900} />
+                <div key={i + 1} style={{ marginBottom: PAGE_GAP }}>
+                  <Page
+                    pageNumber={i + 1}
+                    width={RENDER_WIDTH}
+                    onLoadSuccess={i === 0 ? handlePageLoadSuccess : undefined}
+                  />
+                </div>
               ))}
             </Document>
 
-            {signatures.map((sig, i) => (
-              <DraggableSignature
-                key={sig.id}
-                sig={sig}
-                index={i}
-                onRemove={removeSignature}
-              />
-            ))}
+            {signatures.map((sig, i) => {
+              const slot = pageHeight + PAGE_GAP;
+              const absoluteTop = (sig.page - 1) * slot + sig.y;
+              return (
+                <DraggableSignature
+                  key={sig.id}
+                  sig={{ ...sig, y: absoluteTop }}
+                  index={i}
+                  onRemove={removeSignature}
+                />
+              );
+            })}
           </div>
         </DndContext>
 
@@ -235,7 +275,7 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
             <div className="space-y-2">
               {signatures.map((sig, i) => (
                 <div key={sig.id} className="flex justify-between items-center bg-white/5 rounded-lg px-4 py-2">
-                  <span className="text-sm text-slate-300">Signature {i + 1}</span>
+                  <span className="text-sm text-slate-300">Signature {i + 1} — Page {sig.page}</span>
                   <span className="text-xs text-slate-500">x: {Math.round(sig.x)}, y: {Math.round(sig.y)}</span>
                   <button onClick={() => removeSignature(sig.id)} className="text-red-400 text-xs hover:text-red-300">Remove</button>
                 </div>
