@@ -58,6 +58,9 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showSignatureCanvas, setShowSignatureCanvas] = useState(false);
   const [drawnSignatureImage, setDrawnSignatureImage] = useState<string | null>(null);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const pdfUrl = `http://localhost:5000/${filepath}`;
@@ -121,6 +124,22 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
     };
     setSignatures([...signatures, newSig]);
     alert('✅ Signature added! Drag it to position on the PDF, then click Sign & Save');
+  };
+
+  const handleGetSummary = async () => {
+    try {
+      setLoadingSummary(true);
+      setShowSummary(true);
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:5000/api/ai/summarize/${documentId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAiSummary(res.data.summary);
+    } catch (error) {
+      setAiSummary('❌ Failed to generate summary. Please try again.');
+    } finally {
+      setLoadingSummary(false);
+    }
   };
 
   const handleSave = async (finalStatus: 'signed' | 'rejected') => {
@@ -194,6 +213,12 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
             </div>
           </div>
           <div className="flex gap-3">
+            <button
+              onClick={handleGetSummary}
+              disabled={loadingSummary}
+              className="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-4 py-2 rounded-xl hover:bg-purple-500/30 transition disabled:opacity-50">
+              {loadingSummary ? '⏳ Analyzing...' : '🤖 AI Summary'}
+            </button>
             <button onClick={() => setSignatures([])} className="bg-white/10 text-white px-4 py-2 rounded-xl hover:bg-white/20 transition">
               🗑️ Clear
             </button>
@@ -215,6 +240,24 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
             </button>
           </div>
         </div>
+
+        {/* AI Summary Panel */}
+        {showSummary && (
+          <div className="mb-4 bg-purple-500/10 border border-purple-500/30 rounded-2xl p-5 relative">
+            <button
+              onClick={() => setShowSummary(false)}
+              className="absolute top-3 right-3 text-slate-400 hover:text-white">✕</button>
+            <h3 className="font-black text-purple-400 mb-3 flex items-center gap-2">🤖 AI Document Summary</h3>
+            {loadingSummary ? (
+              <div className="flex items-center gap-3 text-slate-300 text-sm">
+                <div className="w-5 h-5 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin"></div>
+                Reading and analyzing document...
+              </div>
+            ) : (
+              <div className="text-slate-200 text-sm whitespace-pre-wrap leading-relaxed">{aiSummary}</div>
+            )}
+          </div>
+        )}
 
         {/* Status Bar */}
         <div className="flex gap-3 mb-4">

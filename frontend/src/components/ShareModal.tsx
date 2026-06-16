@@ -29,6 +29,19 @@ export default function ShareModal({ documentId, filename, onClose }: Props) {
       );
       setLink(res.data.signingLink);
       setSent(true);
+
+      // Save to shared links history
+      const history = JSON.parse(localStorage.getItem('sharedLinks') || '[]');
+      history.unshift({
+        id: Date.now(),
+        documentId,
+        filename,
+        signerName,
+        signerEmail,
+        link: res.data.signingLink,
+        sentAt: new Date().toISOString()
+      });
+      localStorage.setItem('sharedLinks', JSON.stringify(history.slice(0, 50)));
     } catch (error) {
       alert('❌ Failed to send! Check email settings.');
     } finally {

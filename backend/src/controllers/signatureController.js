@@ -33,6 +33,17 @@ const saveSignature = async (req, res) => {
       data: { status: status || 'pending' }
     });
 
+    // Log audit trail with IP and timestamp
+    const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    await prisma.auditLog.create({
+      data: {
+        documentId: parseInt(documentId),
+        userId: req.user.userId,
+        action: `Document ${status || 'pending'} by user at ${new Date().toISOString()}`,
+        ipAddress: ipAddress.toString()
+      }
+    });
+
     res.status(201).json({ message: 'Signature saved', signature });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -95,7 +106,6 @@ const finalizeSignature = async (req, res) => {
       const { width, height } = page.getSize();
 
       const scale = width / RENDER_WIDTH;
-
       const pdfX = Math.max(0, Math.min(sig.x * scale, width - 150));
       let pdfY = height - (sig.y * scale);
       pdfY = Math.max(20, Math.min(pdfY, height - 50));
@@ -143,7 +153,18 @@ const finalizeSignature = async (req, res) => {
 
     await prisma.document.update({
       where: { id: parseInt(documentId) },
-      data: { status: 'signed' }
+      data: { status: 'signed', signedFilepath: signedPath }
+    });
+
+    // Log audit trail for finalize
+    const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    await prisma.auditLog.create({
+      data: {
+        documentId: parseInt(documentId),
+        userId: req.user.userId,
+        action: `Document signed and PDF generated at ${new Date().toISOString()}`,
+        ipAddress: ipAddress.toString()
+      }
     });
 
     console.log('✅ PDF signed and saved:', signedPath);

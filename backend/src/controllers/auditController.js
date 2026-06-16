@@ -32,7 +32,7 @@ const getAuditLogs = async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json({ logs });
+    res.json({ auditLogs: logs });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
