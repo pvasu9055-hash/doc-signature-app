@@ -11,7 +11,7 @@ import { BACKEND_URL } from '../api';
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const RENDER_WIDTH = 900;
-const PAGE_GAP = 8; // gap between pages in react-pdf rendering
+const PAGE_GAP = 8;
 
 interface Signature {
   id: string;
@@ -26,7 +26,7 @@ interface Props {
   onBack: () => void;
 }
 
-function DraggableSignature({ sig, index, onRemove }: { sig: Signature, index: number, onRemove: (id: string) => void }) {
+function DraggableSignature({ sig, onRemove }: { sig: Signature, onRemove: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: sig.id });
   const style = {
     position: 'absolute' as const,
@@ -149,7 +149,6 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
       const token = localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-      // Clear old signatures for this document before saving new ones
       await axios.delete(`${BACKEND_URL}/api/signatures/${documentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -202,7 +201,6 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
     <div className="min-h-screen bg-[#0a0a0f] text-white p-8">
       <div className="max-w-5xl mx-auto">
 
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <button onClick={onBack} className="bg-white/10 text-white px-4 py-2 rounded-xl hover:bg-white/20 transition">
@@ -223,8 +221,8 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
             <button onClick={() => setSignatures([])} className="bg-white/10 text-white px-4 py-2 rounded-xl hover:bg-white/20 transition">
               🗑️ Clear
             </button>
-            <button 
-              onClick={() => setShowSignatureCanvas(true)} 
+            <button
+              onClick={() => setShowSignatureCanvas(true)}
               className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-4 py-2 rounded-xl hover:bg-blue-500/30 transition">
               ✏️ Draw Signature
             </button>
@@ -242,7 +240,6 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
           </div>
         </div>
 
-        {/* AI Summary Panel */}
         {showSummary && (
           <div className="mb-4 bg-purple-500/10 border border-purple-500/30 rounded-2xl p-5 relative">
             <button
@@ -260,7 +257,6 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
           </div>
         )}
 
-        {/* Status Bar */}
         <div className="flex gap-3 mb-4">
           {['pending', 'signed', 'rejected'].map((s) => (
             <div key={s} className={`px-4 py-1.5 rounded-full text-xs font-bold capitalize ${status === s ? s === 'signed' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : s === 'rejected' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-white/5 text-slate-500'}`}>
@@ -274,7 +270,6 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
           )}
         </div>
 
-        {/* PDF + Signature Canvas */}
         <DndContext onDragEnd={handleDragEnd}>
           <div
             ref={containerRef}
@@ -297,14 +292,13 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
               ))}
             </Document>
 
-            {signatures.map((sig, i) => {
+            {signatures.map((sig) => {
               const slot = pageHeight + PAGE_GAP;
               const absoluteTop = (sig.page - 1) * slot + sig.y;
               return (
                 <DraggableSignature
                   key={sig.id}
                   sig={{ ...sig, y: absoluteTop }}
-                  index={i}
                   onRemove={removeSignature}
                 />
               );
@@ -312,7 +306,6 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
           </div>
         </DndContext>
 
-        {/* Signatures List */}
         {signatures.length > 0 && (
           <div className="mt-6 bg-white/5 border border-white/10 rounded-2xl p-4">
             <h3 className="font-bold mb-3 text-slate-300">📋 Placed Signatures ({signatures.length})</h3>
@@ -336,7 +329,6 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
         />
       )}
 
-      {/* Reject Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 w-full max-w-md">

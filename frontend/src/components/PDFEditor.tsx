@@ -8,11 +8,10 @@ interface SignatureField {
 }
 
 interface Props {
-  documentId: number;
   onSave: (signatures: SignatureField[]) => void;
 }
 
-export default function PDFEditor({ documentId, onSave }: Props) {
+export default function PDFEditor({ onSave }: Props) {
   const [signatures, setSignatures] = useState<SignatureField[]>([]);
   const [dragging, setDragging] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
