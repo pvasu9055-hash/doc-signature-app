@@ -6,6 +6,7 @@ import axios from 'axios';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import SignatureCanvasModal from './SignatureCanvas';
+import { BACKEND_URL } from '../api';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -63,7 +64,7 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
   const [showSummary, setShowSummary] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const pdfUrl = `http://localhost:5000/${filepath}`;
+  const pdfUrl = `${BACKEND_URL}/${filepath}`;
 
   const handlePageLoadSuccess = (page: any) => {
     if (page.originalWidth && page.originalHeight) {
@@ -131,7 +132,7 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
       setLoadingSummary(true);
       setShowSummary(true);
       const token = localStorage.getItem('token');
-      const res = await axios.get(`http://localhost:5000/api/ai/summarize/${documentId}`, {
+      const res = await axios.get(`${BACKEND_URL}/api/ai/summarize/${documentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAiSummary(res.data.summary);
@@ -149,13 +150,13 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
 
       // Clear old signatures for this document before saving new ones
-      await axios.delete(`http://localhost:5000/api/signatures/${documentId}`, {
+      await axios.delete(`${BACKEND_URL}/api/signatures/${documentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (signatures.length > 0) {
         for (const sig of signatures) {
-          await axios.post('http://localhost:5000/api/signatures', {
+          await axios.post(`${BACKEND_URL}/api/signatures`, {
             documentId,
             x: sig.x,
             y: sig.y,
@@ -166,7 +167,7 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
           }, { headers: { Authorization: `Bearer ${token}` } });
         }
       } else {
-        await axios.post('http://localhost:5000/api/signatures', {
+        await axios.post(`${BACKEND_URL}/api/signatures`, {
           documentId,
           x: 0,
           y: 0,
@@ -177,13 +178,13 @@ export default function SignPage({ documentId, filepath, onBack }: Props) {
       }
 
       if (finalStatus === 'signed' && signatures.length > 0) {
-        const finalizeRes = await axios.post('http://localhost:5000/api/signatures/finalize', {
+        const finalizeRes = await axios.post(`${BACKEND_URL}/api/signatures/finalize`, {
           documentId,
           signerName: user.name || 'Signed',
           signatureImage: drawnSignatureImage
         }, { headers: { Authorization: `Bearer ${token}` } });
 
-        const signedFileUrl = `http://localhost:5000/${finalizeRes.data.signedFile}`;
+        const signedFileUrl = `${BACKEND_URL}/${finalizeRes.data.signedFile}`;
         window.open(signedFileUrl, '_blank');
       }
 

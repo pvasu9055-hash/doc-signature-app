@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getDocuments, uploadDocument } from '../api';
+import { getDocuments, uploadDocument, BACKEND_URL } from '../api';
 import ShareModal from './ShareModal';
 
 function AuditTrailPage({ documents, formatDate }: { documents: any[], formatDate: (d: string) => string }) {
@@ -12,7 +12,7 @@ function AuditTrailPage({ documents, formatDate }: { documents: any[], formatDat
         const token = localStorage.getItem('token');
         const allLogs: any[] = [];
         for (const doc of documents) {
-          const res = await fetch(`http://localhost:5000/api/audit/${doc.id}`, {
+          const res = await fetch(`${BACKEND_URL}/api/audit/${doc.id}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           const data = await res.json();
@@ -438,10 +438,10 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:5000/${doc.filepath}`, '_blank'); }} className="bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-white/20 transition">👁 View</button>
+                            <button onClick={(e) => { e.stopPropagation(); window.open(`${BACKEND_URL}/${doc.filepath}`, '_blank'); }} className="bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-white/20 transition">👁 View</button>
                             <button onClick={(e) => handleSignClick(e, doc.id, doc.filepath)} className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:opacity-90 transition">✍️ Sign</button>
                             <button onClick={(e) => { e.stopPropagation(); setShareDoc(doc); }} className="bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-white/20 transition">🔗 Share</button>
-                            <button onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:5000/${doc.signedFilepath || doc.filepath}`, '_blank'); }} className="bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-white/20 transition">⬇️ {doc.signedFilepath ? '📄 Signed PDF' : 'Download'}</button>
+                            <button onClick={(e) => { e.stopPropagation(); window.open(`${BACKEND_URL}/${doc.signedFilepath || doc.filepath}`, '_blank'); }} className="bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-white/20 transition">⬇️ {doc.signedFilepath ? '📄 Signed PDF' : 'Download'}</button>
                           </div>
                         </div>
                       </div>

@@ -3,6 +3,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { DndContext, useDraggable } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import axios from 'axios';
+import { BACKEND_URL } from '../api';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -72,7 +73,7 @@ export default function PublicSignPage({ token, docId }: Props) {
   useEffect(() => {
     const fetchDoc = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/email/signing-request?token=${token}&docId=${docId}`);
+        const res = await axios.get(`${BACKEND_URL}/api/email/signing-request?token=${token}&docId=${docId}`);
         setDocument(res.data.document);
       } catch (err) {
         setError('Invalid or expired signing link!');
@@ -158,7 +159,7 @@ export default function PublicSignPage({ token, docId }: Props) {
     try {
       setSaving(true);
       for (const sig of signatures) {
-        await axios.post('http://localhost:5000/api/email/public-sign', {
+        await axios.post(`${BACKEND_URL}/api/email/public-sign`, {
           token, docId, signerName, signerEmail,
           x: sig.x, y: sig.y, page: sig.page,
           signatureImage: sig.id.includes('drawn') ? drawnSignature : null
@@ -166,10 +167,10 @@ export default function PublicSignPage({ token, docId }: Props) {
       }
 
       // Finalize - embed signature into PDF
-      const finalizeRes = await axios.post('http://localhost:5000/api/email/public-finalize', {
+      const finalizeRes = await axios.post(`${BACKEND_URL}/api/email/public-finalize`, {
         docId, signerName
       });
-      setSignedFileUrl(`http://localhost:5000/${finalizeRes.data.signedFile}`);
+      setSignedFileUrl(`${BACKEND_URL}/${finalizeRes.data.signedFile}`);
       setStep('done');
     } catch (error) {
       alert('❌ Failed to sign document!');
@@ -248,7 +249,7 @@ export default function PublicSignPage({ token, docId }: Props) {
     </div>
   );
 
-  const pdfUrl = `http://localhost:5000/${document?.filepath}`;
+  const pdfUrl = `${BACKEND_URL}/${document?.filepath}`;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white p-8">
