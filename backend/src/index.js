@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const fs = require('fs');
+const path = require('path');
 const authRoutes = require('./routes/authRoutes');
 const docRoutes = require('./routes/docRoutes');
 const signatureRoutes = require('./routes/signatureRoutes');
@@ -9,6 +11,12 @@ const auditRoutes = require('./routes/auditRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 
 dotenv.config();
+
+// Auto-create uploads folder if it doesn't exist
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 const app = express();
 app.use(cors());
