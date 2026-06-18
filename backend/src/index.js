@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const fs = require('fs');
 const path = require('path');
+
 const authRoutes = require('./routes/authRoutes');
 const docRoutes = require('./routes/docRoutes');
 const signatureRoutes = require('./routes/signatureRoutes');
@@ -19,8 +20,17 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const app = express();
-app.use(cors());
+
+// CORS
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
+
 app.use('/uploads', express.static('uploads'));
 
 // Routes
@@ -32,10 +42,13 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/ai', aiRoutes);
 
 app.get('/', (req, res) => {
-  res.json({ message: 'Document Signature API is running 🚀' });
+  res.json({
+    message: 'Document Signature API is running 🚀'
+  });
 });
 
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
