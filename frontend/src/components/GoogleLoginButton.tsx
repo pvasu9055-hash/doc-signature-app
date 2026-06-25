@@ -1,4 +1,4 @@
- import { GoogleLogin } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function GoogleLoginButton() {
   const handleLoginSuccess = (credentialResponse: any) => {
@@ -13,6 +13,7 @@ export default function GoogleLoginButton() {
       .then(data => {
         console.log('Backend response:', data);
         localStorage.setItem('token', data.authToken);
+        localStorage.setItem('user', JSON.stringify(data.user));
         window.location.href = '/';
       })
       .catch(err => console.error('Login error:', err));
