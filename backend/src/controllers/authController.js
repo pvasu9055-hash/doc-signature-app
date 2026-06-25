@@ -2,8 +2,10 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
+const { OAuth2Client } = require('google-auth-library');
 
 const prisma = new PrismaClient();
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const register = async (req, res) => {
   try {
@@ -52,4 +54,47 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+const googleLogin = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    // Verify Google token
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+
+    // Find or create user
+    let user = await prisma.user.findUnique({ where: { email } });
+    
+    if (!user) {
+      user = await prisma.user.create({
+        data: { 
+          email, 
+          name, 
+          password: 'google-oauth',
+        }
+      });
+    }
+
+    // Create JWT token
+    const jwtToken = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({ 
+      message: 'Login successful', 
+      authToken: jwtToken, 
+      user: { id: user.id, name: user.name, email: user.email } 
+    });
+  } catch (error) {
+    res.status(401).json({ message: 'Invalid token', error: error.message });
+  }
+};
+
+module.exports = { register, login, googleLogin };
