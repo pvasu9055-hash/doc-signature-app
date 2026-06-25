@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { getDocuments, uploadDocument, BACKEND_URL } from '../api';
 import ShareModal from './ShareModal';
 
-function AuditTrailPage({ documents, formatDate }: { documents: any[], formatDate: (d: string) => string }) {
+function AuditTrailPage({ documents }: { documents: any[] }) {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -147,7 +147,6 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
     { label: 'Rejected Documents', value: documents.filter(d => d.status === 'rejected').length, icon: '❌', color: 'from-red-500/20 to-red-500/5', border: 'border-red-500/20', text: 'text-red-400', trend: '+2%', change: 'up' },
   ];
 
-  // @ts-ignore
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   const formatSize = (b: number) => {
     if (!b) return '0 B';
@@ -261,7 +260,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
 
         {/* Main Content */}
         <main className="flex-1 px-8 py-12">
-          {activePage === 'audit' && <AuditTrailPage documents={documents} formatDate={formatDate} />}
+          {activePage === 'audit' && <AuditTrailPage documents={documents} />}
 
           {activePage === 'dashboard' && (
             <>
