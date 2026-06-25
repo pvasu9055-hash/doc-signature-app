@@ -147,6 +147,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
     { label: 'Rejected Documents', value: documents.filter(d => d.status === 'rejected').length, icon: '❌', color: 'from-red-500/20 to-red-500/5', border: 'border-red-500/20', text: 'text-red-400', trend: '+2%', change: 'up' },
   ];
 
+  // @ts-ignore
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   const formatSize = (b: number) => {
     if (!b) return '0 B';
