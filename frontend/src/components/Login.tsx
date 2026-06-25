@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { login } from '../api';
+import GoogleLoginButton from './GoogleLoginButton';
 
 const schema = z.object({
   email: z.string().email('Invalid email address'),
@@ -72,6 +73,14 @@ export default function Login({ onLogin, onSwitchToRegister }: Props) {
             className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-50">
             {isSubmitting ? '⏳ Signing in...' : 'Sign In'}
           </button>
+
+          <div className="my-6 flex items-center gap-4">
+            <div className="flex-1 h-px bg-white/20"></div>
+            <span className="text-slate-400 text-sm">or</span>
+            <div className="flex-1 h-px bg-white/20"></div>
+          </div>
+
+          <GoogleLoginButton />
 
           <p className="text-center text-slate-400 text-sm mt-6">
             Don't have an account?{' '}
