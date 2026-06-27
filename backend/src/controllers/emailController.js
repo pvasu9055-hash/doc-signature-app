@@ -26,7 +26,7 @@ const generateSigningLink = async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: 'DocSign <onboarding@resend.dev>',
+        from: 'DocSign <noreply@vasutech.online>',
         to: signerEmail,
         subject: `✍️ Signature Requested: ${document.filename}`,
         html: `
