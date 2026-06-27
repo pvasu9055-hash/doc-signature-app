@@ -15,6 +15,7 @@ type FormData = z.infer<typeof schema>;
 interface Props {
   onLogin: () => void;
   onSwitchToRegister: () => void;
+  onForgotPassword: () => void;
 }
 
 const FALLBACK_NEWS = [
@@ -82,7 +83,7 @@ function timeAgo(dateStr: string): string {
   }
 }
 
-export default function Login({ onLogin, onSwitchToRegister }: Props) {
+export default function Login({ onLogin, onSwitchToRegister, onForgotPassword }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [activeNews, setActiveNews] = useState(0);
   const [activeQuote, setActiveQuote] = useState(0);
@@ -95,7 +96,6 @@ export default function Login({ onLogin, onSwitchToRegister }: Props) {
     resolver: zodResolver(schema)
   });
 
-  // Fetch real news from NewsData.io
   useEffect(() => {
     const apiKey = import.meta.env.VITE_NEWS_API_KEY;
     if (!apiKey) { setNewsLoading(false); return; }
@@ -112,11 +112,10 @@ export default function Login({ onLogin, onSwitchToRegister }: Props) {
           setNewsHeadlines(mapped);
         }
       })
-      .catch(() => {}) // keep fallback
+      .catch(() => {})
       .finally(() => setNewsLoading(false));
   }, []);
 
-  // Rotate news
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveNews(prev => (prev + 1) % newsHeadlines.length);
@@ -124,7 +123,6 @@ export default function Login({ onLogin, onSwitchToRegister }: Props) {
     return () => clearInterval(interval);
   }, [newsHeadlines]);
 
-  // Rotate quotes
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveQuote(prev => (prev + 1) % QUOTES.length);
@@ -132,7 +130,6 @@ export default function Login({ onLogin, onSwitchToRegister }: Props) {
     return () => clearInterval(interval);
   }, []);
 
-  // Toggle news/quotes every 15 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setShowNews(prev => !prev);
@@ -317,7 +314,14 @@ export default function Login({ onLogin, onSwitchToRegister }: Props) {
           <div className="mb-2">
             <div className="flex items-center justify-between mb-2">
               <label className="text-slate-300 text-xs font-semibold uppercase tracking-wider">Password</label>
-              <button type="button" className="text-orange-400 text-xs hover:text-orange-300 transition">Forgot password?</button>
+              {/* ✅ ONLY CHANGE — added onClick={onForgotPassword} */}
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                className="text-orange-400 text-xs hover:text-orange-300 transition"
+              >
+                Forgot password?
+              </button>
             </div>
             <div className="relative">
               <input
