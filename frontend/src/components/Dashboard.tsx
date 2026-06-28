@@ -247,7 +247,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
               userId={user.id}
               onSetupComplete={() => {
                 alert('✅ 2FA Setup Complete! Scan QR code with Google Authenticator.');
-                setActivePage('settings');
+                setActivePage('verify-2fa-setup');
               }}
               onBack={() => setActivePage('settings')}
             />
