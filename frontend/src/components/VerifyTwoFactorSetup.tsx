@@ -26,7 +26,7 @@ export default function VerifyTwoFactorSetup({ userId, secret, onSuccess, onBack
       setError('');
       const token = localStorage.getItem('token');
 
-      const res = await fetch(`${BACKEND_URL}/2fa/verify-setup`, {
+      const res = await fetch(`${BACKEND_URL}/api/2fa/verify-setup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
