@@ -1,142 +1,154 @@
-import { useState } from 'react';
-import { Copy, ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Shield, QrCode, Smartphone, ArrowLeft, ArrowRight } from 'lucide-react';
+import { BACKEND_URL } from '../api';
 
 interface Enable2FAProps {
-  userId: number;
-  onSetupComplete: () => void;
+  userId: string;
+  onSetupComplete: (secret: string) => void; // ← passes secret back to Dashboard
   onBack: () => void;
 }
 
 export default function Enable2FA({ userId, onSetupComplete, onBack }: Enable2FAProps) {
   const [qrCode, setQrCode] = useState<string>('');
   const [secret, setSecret] = useState<string>('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const handleEnable = async () => {
-    setLoading(true);
-    setError('');
+  useEffect(() => {
+    generateQR();
+  }, []);
+
+  const generateQR = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/2fa/enable`, {
+      setLoading(true);
+      setError('');
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${BACKEND_URL}/2fa/setup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ userId }),
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message);
-      }
+      if (!res.ok) throw new Error('Failed to generate QR code');
 
+      const data = await res.json();
       setQrCode(data.qrCode);
-      setSecret(data.secret);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to enable 2FA');
+      setSecret(data.secret); // ← capture secret from backend
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate QR code');
     } finally {
       setLoading(false);
     }
   };
 
-  const copySecret = () => {
-    navigator.clipboard.writeText(secret);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (!qrCode) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 shadow-2xl">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🔐</span>
-              </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Enable Two-Factor Authentication</h2>
-              <p className="text-slate-400">Secure your DocSign account with 2FA</p>
-            </div>
-
-            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 mb-6">
-              <ul className="space-y-3 text-sm text-slate-300">
-                <li className="flex items-start gap-3">
-                  <span className="text-orange-400 mt-1">✓</span>
-                  <span>Download Google Authenticator or Authy on your phone</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-orange-400 mt-1">✓</span>
-                  <span>Scan the QR code we'll generate</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-orange-400 mt-1">✓</span>
-                  <span>Enter the 6-digit code to verify</span>
-                </li>
-              </ul>
-            </div>
-
-            {error && (
-              <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 mb-6">
-                <p className="text-red-300 text-sm">⚠️ {error}</p>
-              </div>
-            )}
-
-            <button
-              onClick={handleEnable}
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              {loading ? '⏳ Generating QR Code...' : '📱 Continue to Setup'}
-            </button>
-
-            <button
-              onClick={onBack}
-              className="w-full mt-3 text-slate-400 hover:text-white font-medium py-2 transition-colors flex items-center justify-center gap-2"
-            >
-              <ArrowLeft size={18} /> Back
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--bg-primary)' }}>
       <div className="w-full max-w-md">
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 shadow-2xl">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-white mb-2">Scan QR Code</h2>
-            <p className="text-slate-400">Use Google Authenticator or Authy</p>
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)' }}>
+            <Shield size={36} color="white" />
+          </div>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+            Setup Two-Factor Auth
+          </h1>
+          <p style={{ color: 'var(--text-secondary)' }}>
+            Scan the QR code with Google Authenticator or Authy
+          </p>
+        </div>
+
+        <div className="rounded-2xl p-8" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+          {/* Step indicators */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
+              style={{ background: '#f97316' }}>1</div>
+            <div className="flex-1 h-0.5" style={{ background: '#f97316' }}></div>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+              style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>2</div>
           </div>
 
-          <div className="bg-white rounded-lg p-4 mb-6 flex justify-center">
-            <img src={qrCode} alt="2FA QR Code" className="w-64 h-64" />
-          </div>
-
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-6">
-            <p className="text-xs text-slate-400 mb-2">Can't scan? Enter this code manually:</p>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-orange-400 font-mono break-all">
-                {secret}
-              </code>
-              <button
-                onClick={copySecret}
-                className="bg-slate-700 hover:bg-slate-600 text-white p-2 rounded transition-colors"
-                title="Copy"
-              >
-                <Copy size={18} />
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p style={{ color: 'var(--text-secondary)' }}>Generating QR code...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-400 mb-4">{error}</p>
+              <button onClick={generateQR}
+                className="px-6 py-2 rounded-lg text-white font-medium"
+                style={{ background: '#f97316' }}>
+                Try Again
               </button>
             </div>
-            {copied && <p className="text-green-400 text-xs mt-2">✓ Copied!</p>}
-          </div>
+          ) : (
+            <>
+              {/* QR Code */}
+              <div className="flex flex-col items-center mb-6">
+                <div className="p-4 rounded-xl mb-4" style={{ background: 'white' }}>
+                  {qrCode && (
+                    <img src={qrCode} alt="2FA QR Code" className="w-48 h-48" />
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  <QrCode size={16} />
+                  <span>Scan with your authenticator app</span>
+                </div>
+              </div>
 
-          <button
-            onClick={() => onSetupComplete()}
-            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200"
-          >
-            ✓ I've Scanned the QR Code
-          </button>
+              {/* Manual entry */}
+              <div className="rounded-xl p-4 mb-6" style={{ background: 'var(--bg-tertiary)' }}>
+                <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Can't scan? Enter this code manually:
+                </p>
+                <code className="text-sm font-mono break-all" style={{ color: '#f97316' }}>
+                  {secret}
+                </code>
+              </div>
+
+              {/* Instructions */}
+              <div className="flex items-start gap-3 mb-8 p-4 rounded-xl"
+                style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.2)' }}>
+                <Smartphone size={20} color="#f97316" className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium mb-1" style={{ color: '#f97316' }}>After scanning:</p>
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    Open your authenticator app and scan the QR code above. Then click "Next" to verify with the 6-digit code.
+                  </p>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button onClick={onBack}
+                  className="flex-1 py-3 rounded-xl font-medium flex items-center justify-center gap-2"
+                  style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                  <ArrowLeft size={18} />
+                  Back
+                </button>
+                <button
+                  onClick={() => onSetupComplete(secret)} // ← pass secret up!
+                  className="flex-1 py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2"
+                  style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)' }}>
+                  Next
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+            </>
+          )}
         </div>
+
+        {/* Back link */}
+        <button onClick={onBack}
+          className="flex items-center gap-2 mt-6 mx-auto text-sm"
+          style={{ color: 'var(--text-secondary)' }}>
+          <ArrowLeft size={16} />
+          Back to Settings
+        </button>
       </div>
     </div>
   );

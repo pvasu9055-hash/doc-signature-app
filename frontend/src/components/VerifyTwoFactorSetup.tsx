@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react';
+import { BACKEND_URL } from '../api';
 
 interface VerifyTwoFactorSetupProps {
-  userId: number;
-  secret: string;
+  userId: string;
+  secret: string; // ← received from Enable2FA via Dashboard state
   onSuccess: () => void;
   onBack: () => void;
 }
@@ -11,13 +12,8 @@ interface VerifyTwoFactorSetupProps {
 export default function VerifyTwoFactorSetup({ userId, secret, onSuccess, onBack }: VerifyTwoFactorSetupProps) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-
-  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-    setCode(value);
-  };
 
   const handleVerify = async () => {
     if (code.length !== 6) {
@@ -25,87 +21,147 @@ export default function VerifyTwoFactorSetup({ userId, secret, onSuccess, onBack
       return;
     }
 
-    setLoading(true);
-    setError('');
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/2fa/verify-setup`, {
+      setLoading(true);
+      setError('');
+      const token = localStorage.getItem('token');
+
+      const res = await fetch(`${BACKEND_URL}/2fa/verify-setup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, secret, code }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId, token: code, secret }), // ← send secret!
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Invalid code. Please try again.');
       }
 
       setSuccess(true);
-      setTimeout(() => onSuccess(), 2000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid code');
+      setTimeout(() => {
+        onSuccess();
+      }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Verification failed. Try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setCode(val);
+    if (error) setError('');
+  };
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--bg-primary)' }}>
+        <div className="text-center">
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6"
+            style={{ background: 'rgba(34,197,94,0.15)', border: '2px solid #22c55e' }}>
+            <CheckCircle size={48} color="#22c55e" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>2FA Enabled!</h2>
+          <p style={{ color: 'var(--text-secondary)' }}>Your account is now protected.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--bg-primary)' }}>
       <div className="w-full max-w-md">
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 shadow-2xl">
-          {success ? (
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">✓</span>
-              </div>
-              <h2 className="text-2xl font-bold text-white mb-2">2FA Enabled!</h2>
-              <p className="text-slate-400">Your account is now protected with two-factor authentication</p>
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)' }}>
+            <ShieldCheck size={36} color="white" />
+          </div>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+            Verify Your Setup
+          </h1>
+          <p style={{ color: 'var(--text-secondary)' }}>
+            Enter the 6-digit code from your authenticator app
+          </p>
+        </div>
+
+        <div className="rounded-2xl p-8" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+          {/* Step indicators */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
+              style={{ background: '#22c55e' }}>✓</div>
+            <div className="flex-1 h-0.5" style={{ background: '#f97316' }}></div>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
+              style={{ background: '#f97316' }}>2</div>
+          </div>
+
+          {/* Code input */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+              Authentication Code
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={code}
+              onChange={handleInput}
+              placeholder="000000"
+              className="w-full px-4 py-4 rounded-xl text-center text-2xl font-mono tracking-widest outline-none transition-all"
+              style={{
+                background: 'var(--bg-tertiary)',
+                border: `2px solid ${error ? '#ef4444' : code.length === 6 ? '#22c55e' : 'var(--border-color)'}`,
+                color: 'var(--text-primary)',
+              }}
+            />
+            <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
+              Enter the 6-digit code displayed in your authenticator app
+            </p>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="flex items-center gap-3 p-4 rounded-xl mb-6"
+              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+              <AlertTriangle size={18} color="#ef4444" />
+              <p className="text-sm text-red-400">{error}</p>
             </div>
-          ) : (
-            <>
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl">🔐</span>
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-2">Verify Your Setup</h2>
-                <p className="text-slate-400">Enter the 6-digit code from your authenticator app</p>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-300 mb-3">Authentication Code</label>
-                <input
-                  type="text"
-                  value={code}
-                  onChange={handleCodeChange}
-                  placeholder="000000"
-                  maxLength={6}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-center text-2xl font-mono text-white placeholder-slate-600 focus:border-orange-500 focus:outline-none transition-colors"
-                  autoFocus
-                />
-                <p className="text-xs text-slate-500 mt-2">Enter the 6-digit code displayed in your authenticator app</p>
-              </div>
-
-              {error && (
-                <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 mb-6">
-                  <p className="text-red-300 text-sm">⚠️ {error}</p>
-                </div>
-              )}
-
-              <button
-                onClick={handleVerify}
-                disabled={loading || code.length !== 6}
-                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200"
-              >
-                {loading ? '⏳ Verifying...' : '✓ Verify & Enable 2FA'}
-              </button>
-
-              <button
-                onClick={onBack}
-                className="w-full mt-3 text-slate-400 hover:text-white font-medium py-2 transition-colors flex items-center justify-center gap-2"
-              >
-                <ArrowLeft size={18} /> Back
-              </button>
-            </>
           )}
+
+          {/* Buttons */}
+          <div className="flex gap-3">
+            <button onClick={onBack}
+              className="flex-1 py-3 rounded-xl font-medium flex items-center justify-center gap-2"
+              style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+              <ArrowLeft size={18} />
+              Back
+            </button>
+            <button
+              onClick={handleVerify}
+              disabled={loading || code.length !== 6}
+              className="flex-1 py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all"
+              style={{
+                background: code.length === 6 && !loading
+                  ? 'linear-gradient(135deg, #f97316, #ea580c)'
+                  : 'var(--bg-tertiary)',
+                color: code.length === 6 && !loading ? 'white' : 'var(--text-secondary)',
+                cursor: code.length === 6 && !loading ? 'pointer' : 'not-allowed',
+              }}>
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <ShieldCheck size={18} />
+                  Verify & Enable 2FA
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
