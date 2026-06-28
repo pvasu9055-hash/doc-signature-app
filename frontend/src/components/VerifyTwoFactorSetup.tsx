@@ -32,7 +32,7 @@ export default function VerifyTwoFactorSetup({ userId, secret, onSuccess, onBack
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ userId, code: code, secret }), // ← send secret!
+        body: JSON.stringify({ userId, token: code, secret }), // ← send secret!
       });
 
       const data = await res.json();
