@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getDocuments, uploadDocument, BACKEND_URL } from '../api';
 import ShareModal from './ShareModal';
+import Enable2FA from './Enable2FA';
 
 function AuditTrailPage({ documents, formatDate }: { documents: any[], formatDate: (d: string) => string }) {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -107,6 +108,11 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
   };
 
   const toggleSetting = (key: string) => {
+    if (key === 'twoFA') {
+      // When 2FA toggle is clicked, show the Enable2FA page
+      setActivePage('enable-2fa');
+      return;
+    }
     const updated = { ...settings, [key]: !settings[key] };
     setSettings(updated);
     localStorage.setItem('appSettings', JSON.stringify(updated));
@@ -235,6 +241,18 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
         {/* Main Content */}
         <main className="ml-56 flex-1 p-8">
 
+          {/* Enable 2FA Page */}
+          {activePage === 'enable-2fa' && (
+            <Enable2FA 
+              userId={user.id}
+              onSetupComplete={() => {
+                alert('✅ 2FA Setup Complete! Scan QR code with Google Authenticator.');
+                setActivePage('settings');
+              }}
+              onBack={() => setActivePage('settings')}
+            />
+          )}
+
           {/* Profile Page */}
           {activePage === 'profile' && (
             <div className="max-w-lg">
@@ -268,11 +286,11 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
                   { key: 'emailNotifs', label: 'Email Notifications' },
                   { key: 'darkMode', label: 'Dark Mode' },
                   { key: 'autoSave', label: 'Auto-save Signatures' },
-                  { key: 'twoFA', label: 'Two-Factor Auth' }
+                  { key: 'twoFA', label: 'Two-Factor Auth (Click to Setup)' }
                 ].map((s) => (
-                  <div key={s.key} className="flex justify-between items-center p-4 bg-white/5 rounded-xl">
+                  <div key={s.key} onClick={() => toggleSetting(s.key)} className="flex justify-between items-center p-4 bg-white/5 rounded-xl hover:bg-white/10 transition cursor-pointer">
                     <span className="text-white text-sm font-medium">{s.label}</span>
-                    <div onClick={() => toggleSetting(s.key)} className={`w-10 h-5 rounded-full cursor-pointer transition ${settings[s.key as keyof typeof settings] ? 'bg-orange-500' : 'bg-slate-600'}`}></div>
+                    <div className={`w-10 h-5 rounded-full transition ${settings[s.key as keyof typeof settings] ? 'bg-orange-500' : 'bg-slate-600'}`}></div>
                   </div>
                 ))}
               </div>
