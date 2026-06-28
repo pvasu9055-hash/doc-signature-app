@@ -10,6 +10,7 @@ const signatureRoutes = require('./routes/signatureRoutes');
 const emailRoutes = require('./routes/emailRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const twoFactorRoutes = require('./routes/twoFactorRoutes'); // ADD THIS
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use('/api/signatures', signatureRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/2fa', twoFactorRoutes); // ADD THIS
 
 app.get('/', (req, res) => {
   res.json({

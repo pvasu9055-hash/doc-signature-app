@@ -45,13 +45,27 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // Check if 2FA is enabled
+    if (user.twoFactorEnabled) {
+      return res.json({
+        message: 'Password correct. Please verify 2FA code',
+        needsTwoFactor: true,
+        userId: user.id
+      });
+    }
+
+    // 2FA not enabled, proceed with normal login
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    res.json({ message: 'Login successful', token, user: { id: user.id, name: user.name, email: user.email } });
+    res.json({ 
+      message: 'Login successful', 
+      token, 
+      user: { id: user.id, name: user.name, email: user.email } 
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -78,6 +92,15 @@ const googleLogin = async (req, res) => {
           name,
           password: 'google-oauth',
         }
+      });
+    }
+
+    // Check if 2FA is enabled for Google login too
+    if (user.twoFactorEnabled) {
+      return res.json({
+        message: 'Google login successful. Please verify 2FA code',
+        needsTwoFactor: true,
+        userId: user.id
       });
     }
 
