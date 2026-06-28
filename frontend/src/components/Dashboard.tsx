@@ -88,6 +88,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
   const [activeTab, setActiveTab] = useState('all');
   const [activePage, setActivePage] = useState('dashboard');
   const [shareDoc, setShareDoc] = useState<any>(null);
+  const [twoFASecret, setTwoFASecret] = useState('');
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('appSettings');
     return saved ? JSON.parse(saved) : { emailNotifs: true, darkMode: true, autoSave: true, twoFA: false };
@@ -246,7 +247,8 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
           {activePage === 'enable-2fa' && (
             <Enable2FA 
               userId={user.id}
-              onSetupComplete={() => {
+              onSetupComplete={(secret) => {
+                setTwoFASecret(secret);
                 setActivePage('verify-2fa-setup');
               }}
               onBack={() => setActivePage('settings')}
@@ -257,10 +259,11 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
           {activePage === 'verify-2fa-setup' && (
             <VerifyTwoFactorSetup
               userId={user.id}
-              secret=""
+              secret={twoFASecret}
               onSuccess={() => {
+                setTwoFASecret('');
+                setSettings(prev => ({ ...prev, twoFA: true }));
                 setActivePage('settings');
-                alert('✅ 2FA Enabled Successfully!');
               }}
               onBack={() => setActivePage('enable-2fa')}
             />
