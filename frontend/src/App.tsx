@@ -24,7 +24,6 @@ function App() {
     const path = window.location.pathname;
     const params = new URLSearchParams(window.location.search);
 
-    // Public signing link
     if (path.startsWith('/sign/')) {
       const token = path.replace('/sign/', '');
       const docId = params.get('docId') || '';
@@ -36,13 +35,11 @@ function App() {
       }
     }
 
-    // Password reset link
     if (path === '/reset-password') {
       setView('reset-password');
       return;
     }
 
-    // Forgot password page
     if (path === '/forgot-password') {
       setView('forgot-password');
       return;
@@ -58,13 +55,10 @@ function App() {
 
   const handleLogin = (loginData?: any) => {
     if (loginData?.needsTwoFactor) {
-      // 2FA is required
       setTwoFactorLoginUserId(loginData.userId);
       setView('verify-2fa-login');
       return;
     }
-
-    // Normal login (no 2FA)
     if (loginData?.user) {
       setUser(loginData.user);
     }
@@ -73,7 +67,7 @@ function App() {
   };
 
   const handleRegister = () => setView('login');
-  
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -121,8 +115,8 @@ function App() {
       {view === 'enable-2fa' && user && (
         <Enable2FA
           userId={user.id}
-          onSetupComplete={() => {
-            // After QR code is scanned, move to verification
+          onSetupComplete={(secret: string) => {
+            setTwoFactorSetup({ userId: user.id, secret });
             setView('verify-2fa-setup');
           }}
           onBack={() => setView('dashboard')}
@@ -131,8 +125,9 @@ function App() {
       {view === 'verify-2fa-setup' && user && (
         <VerifyTwoFactorSetup
           userId={user.id}
-          secret=""
+          secret={twoFactorSetup?.secret || ''}
           onSuccess={() => {
+            setTwoFactorSetup(null);
             setView('dashboard');
           }}
           onBack={() => setView('enable-2fa')}
