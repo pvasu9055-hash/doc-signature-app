@@ -111,7 +111,6 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
 
   const toggleSetting = (key: string) => {
     if (key === 'twoFA') {
-      // When 2FA toggle is clicked, show the Enable2FA page
       setActivePage('enable-2fa');
       return;
     }
