@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { getDocuments, uploadDocument, BACKEND_URL } from '../api';
 import ShareModal from './ShareModal';
 import Enable2FA from './Enable2FA';
+import VerifyTwoFactorSetup from './VerifyTwoFactorSetup';
 
 function AuditTrailPage({ documents, formatDate }: { documents: any[], formatDate: (d: string) => string }) {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -249,6 +250,19 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
                 setActivePage('verify-2fa-setup');
               }}
               onBack={() => setActivePage('settings')}
+            />
+          )}
+
+          {/* Verify 2FA Setup Page */}
+          {activePage === 'verify-2fa-setup' && (
+            <VerifyTwoFactorSetup
+              userId={user.id}
+              secret=""
+              onSuccess={() => {
+                setActivePage('settings');
+                alert('✅ 2FA Enabled Successfully!');
+              }}
+              onBack={() => setActivePage('enable-2fa')}
             />
           )}
 
