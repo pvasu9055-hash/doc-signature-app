@@ -23,7 +23,7 @@ export default function Enable2FA({ userId, onSetupComplete, onBack }: Enable2FA
       setLoading(true);
       setError('');
       const token = localStorage.getItem('token');
-      const res = await fetch(`${BACKEND_URL}/api/2fa/setup`, {
+      const res = await fetch(`${BACKEND_URL}/api/2fa/enable`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
