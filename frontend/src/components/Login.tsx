@@ -13,7 +13,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 interface Props {
-  onLogin: () => void;
+  onLogin: (data?: any) => void;
   onSwitchToRegister: () => void;
   onForgotPassword: () => void;
 }
@@ -147,9 +147,17 @@ export default function Login({ onLogin, onSwitchToRegister, onForgotPassword }:
   const onSubmit = async (data: FormData) => {
     try {
       const res = await login(data);
+      
+      // Check if 2FA is required
+      if (res.data.needsTwoFactor) {
+        onLogin(res.data);
+        return;
+      }
+
+      // Normal login (no 2FA)
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
-      onLogin();
+      onLogin(res.data);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Login failed');
     }
@@ -314,7 +322,6 @@ export default function Login({ onLogin, onSwitchToRegister, onForgotPassword }:
           <div className="mb-2">
             <div className="flex items-center justify-between mb-2">
               <label className="text-slate-300 text-xs font-semibold uppercase tracking-wider">Password</label>
-              {/* ✅ ONLY CHANGE — added onClick={onForgotPassword} */}
               <button
                 type="button"
                 onClick={onForgotPassword}

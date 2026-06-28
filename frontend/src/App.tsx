@@ -6,13 +6,19 @@ import Register from './components/Register';
 import PublicSignPage from './components/PublicSignPage';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
+import Enable2FA from './components/Enable2FA';
+import VerifyTwoFactorSetup from './components/VerifyTwoFactorSetup';
+import VerifyTwoFactorLogin from './components/VerifyTwoFactorLogin';
 
 function App() {
-  const [view, setView] = useState<'login' | 'register' | 'dashboard' | 'sign' | 'public-sign' | 'forgot-password' | 'reset-password'>('login');
+  const [view, setView] = useState<'login' | 'register' | 'dashboard' | 'sign' | 'public-sign' | 'forgot-password' | 'reset-password' | 'enable-2fa' | 'verify-2fa-setup' | 'verify-2fa-login'>('login');
   const [currentDocId, setCurrentDocId] = useState<number>(1);
   const [currentDocPath, setCurrentDocPath] = useState<string>('');
   const [publicToken, setPublicToken] = useState<string>('');
   const [publicDocId, setPublicDocId] = useState<string>('');
+  const [user, setUser] = useState<any>(null);
+  const [twoFactorSetup, setTwoFactorSetup] = useState<{ userId: number; secret: string } | null>(null);
+  const [twoFactorLoginUserId, setTwoFactorLoginUserId] = useState<number | null>(null);
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -43,20 +49,39 @@ function App() {
     }
 
     const token = localStorage.getItem('token');
-    if (token) setView('dashboard');
+    const userData = localStorage.getItem('user');
+    if (token && userData) {
+      setUser(JSON.parse(userData));
+      setView('dashboard');
+    }
   }, []);
 
-  const handleLogin = () => {
+  const handleLogin = (loginData?: any) => {
+    if (loginData?.needsTwoFactor) {
+      // 2FA is required
+      setTwoFactorLoginUserId(loginData.userId);
+      setView('verify-2fa-login');
+      return;
+    }
+
+    // Normal login (no 2FA)
+    if (loginData?.user) {
+      setUser(loginData.user);
+    }
     window.history.pushState({}, '', '/');
     setView('dashboard');
   };
+
   const handleRegister = () => setView('login');
+  
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    setUser(null);
     window.history.pushState({}, '', '/');
     setView('login');
   };
+
   const handleOpenEditor = (docId: number, filepath: string) => {
     setCurrentDocId(docId);
     setCurrentDocPath(filepath);
@@ -93,7 +118,43 @@ function App() {
           setView('login');
         }} />
       )}
-      {view === 'dashboard' && (
+      {view === 'enable-2fa' && user && (
+        <Enable2FA
+          userId={user.id}
+          onSetupComplete={() => {
+            // After QR code is scanned, move to verification
+            setView('verify-2fa-setup');
+          }}
+          onBack={() => setView('dashboard')}
+        />
+      )}
+      {view === 'verify-2fa-setup' && user && (
+        <VerifyTwoFactorSetup
+          userId={user.id}
+          secret=""
+          onSuccess={() => {
+            setView('dashboard');
+          }}
+          onBack={() => setView('enable-2fa')}
+        />
+      )}
+      {view === 'verify-2fa-login' && twoFactorLoginUserId && (
+        <VerifyTwoFactorLogin
+          userId={twoFactorLoginUserId}
+          onSuccess={(token, userData) => {
+            setUser(userData);
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(userData));
+            window.history.pushState({}, '', '/');
+            setView('dashboard');
+          }}
+          onBack={() => {
+            setTwoFactorLoginUserId(null);
+            setView('login');
+          }}
+        />
+      )}
+      {view === 'dashboard' && user && (
         <Dashboard onOpenEditor={handleOpenEditor} onLogout={handleLogout} />
       )}
       {view === 'sign' && (
