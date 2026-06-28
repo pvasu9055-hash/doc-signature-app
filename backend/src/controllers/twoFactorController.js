@@ -43,9 +43,9 @@ const enableTwoFactor = async (req, res) => {
 // Verify 2FA Setup - User enters code from app to confirm
 const verifyTwoFactorSetup = async (req, res) => {
   try {
-    const { userId, secret, code } = req.body;
+    const { userId, secret, token } = req.body;
 
-    if (!code || code.length !== 6) {
+    if (!token || token.length !== 6) {
       return res.status(400).json({ message: 'Invalid code format' });
     }
 
@@ -53,7 +53,7 @@ const verifyTwoFactorSetup = async (req, res) => {
     const verified = speakeasy.totp.verify({
       secret: secret,
       encoding: 'base32',
-      token: code,
+      token: token,
       window: 2
     });
 
@@ -80,9 +80,9 @@ const verifyTwoFactorSetup = async (req, res) => {
 // Verify 2FA at Login
 const verifyTwoFactorLogin = async (req, res) => {
   try {
-    const { userId, code } = req.body;
+    const { userId, token } = req.body;
 
-    if (!code || code.length !== 6) {
+    if (!token || token.length !== 6) {
       return res.status(400).json({ message: 'Invalid code format' });
     }
 
@@ -99,7 +99,7 @@ const verifyTwoFactorLogin = async (req, res) => {
     const verified = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
-      token: code,
+      token: token,
       window: 2
     });
 
