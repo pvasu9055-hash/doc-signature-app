@@ -247,7 +247,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
           {activePage === 'enable-2fa' && (
             <Enable2FA 
               userId={user.id}
-              onSetupComplete={(secret) => {
+              onSetupComplete={(secret: string) => {
                 setTwoFASecret(secret);
                 setActivePage('verify-2fa-setup');
               }}
@@ -262,7 +262,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
               secret={twoFASecret}
               onSuccess={() => {
                 setTwoFASecret('');
-                setSettings(prev => ({ ...prev, twoFA: true }));
+                setSettings((prev: typeof settings) => ({ ...prev, twoFA: true }));
                 setActivePage('settings');
               }}
               onBack={() => setActivePage('enable-2fa')}
