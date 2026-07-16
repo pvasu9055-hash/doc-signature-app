@@ -1,10 +1,11 @@
 import { GoogleLogin } from '@react-oauth/google';
+import { BACKEND_URL } from '../api';
 
 export default function GoogleLoginButton() {
   const handleLoginSuccess = (credentialResponse: any) => {
     const token = credentialResponse.credential;
     
-    fetch(`${import.meta.env.VITE_API_URL}/api/auth/google`, {
+    fetch(`${BACKEND_URL}/api/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
@@ -12,9 +13,14 @@ export default function GoogleLoginButton() {
       .then(res => res.json())
       .then(data => {
         console.log('Backend response:', data);
-        localStorage.setItem('token', data.authToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        window.location.href = '/';
+        if (data.token && data.user) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          window.location.href = '/';
+        } else {
+          console.error('Login failed:', data.message);
+          alert('Google login failed: ' + (data.message || 'Unknown error'));
+        }
       })
       .catch(err => console.error('Login error:', err));
   };
