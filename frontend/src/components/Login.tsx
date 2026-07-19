@@ -101,16 +101,26 @@ export default function Login({ onLogin, onSwitchToRegister, onForgotPassword, o
     const apiKey = import.meta.env.VITE_NEWS_API_KEY;
     if (!apiKey) { setNewsLoading(false); return; }
 
-    fetch(`https://newsdata.io/api/1/news?apikey=${apiKey}&q=esignature+OR+digital+signature+OR+document+signing&language=en&size=7`)
+    const KEYWORDS = ['sign', 'esignature', 'e-signature', 'docusign', 'contract', 'document', 'legal tech', 'compliance', 'notary', 'workflow'];
+
+    fetch(`https://newsdata.io/api/1/news?apikey=${apiKey}&q="digital signature" OR "e-signature" OR "document signing" OR "contract management"&language=en&size=10`)
       .then(res => res.json())
       .then(data => {
         if (data.results && data.results.length > 0) {
-          const mapped = data.results.slice(0, 7).map((item: any) => ({
+          const filtered = data.results.filter((item: any) => {
+            const title = (item.title || '').toLowerCase();
+            return KEYWORDS.some(k => title.includes(k));
+          });
+
+          const source = filtered.length > 0 ? filtered : data.results;
+
+          const mapped = source.slice(0, 7).map((item: any) => ({
             tag: getTag(item.title || ''),
             text: item.title,
             time: timeAgo(item.pubDate),
           }));
-          setNewsHeadlines(mapped);
+
+          if (mapped.length > 0) setNewsHeadlines(mapped);
         }
       })
       .catch(() => {})
