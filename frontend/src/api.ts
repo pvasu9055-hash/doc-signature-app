@@ -20,6 +20,12 @@ export const register = (data: { name: string; email: string; password: string }
 export const login = (data: { email: string; password: string }) =>
   API.post('/auth/login', data);
 
+export const forgotPassword = (data: { email: string }) =>
+  API.post('/auth/forgot-password', data);
+
+export const resetPassword = (data: { token: string; newPassword: string }) =>
+  API.post('/auth/reset-password', data);
+
 export const uploadDocument = (formData: FormData) =>
   API.post('/docs/upload', formData);
 

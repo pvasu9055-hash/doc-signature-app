@@ -51,12 +51,12 @@ export default function ResetPassword({ onSuccess }: Props) {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ token, newPassword: password }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Something went wrong.');
+        setError(data.message || 'Something went wrong.');
       } else {
         setSuccess(true);
         setTimeout(() => onSuccess(), 3000);
