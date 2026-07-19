@@ -16,6 +16,7 @@ interface Props {
   onLogin: (data?: any) => void;
   onSwitchToRegister: () => void;
   onForgotPassword: () => void;
+  onOtpLogin: () => void;
 }
 
 const FALLBACK_NEWS = [
@@ -83,7 +84,7 @@ function timeAgo(dateStr: string): string {
   }
 }
 
-export default function Login({ onLogin, onSwitchToRegister, onForgotPassword }: Props) {
+export default function Login({ onLogin, onSwitchToRegister, onForgotPassword, onOtpLogin }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [activeNews, setActiveNews] = useState(0);
   const [activeQuote, setActiveQuote] = useState(0);
@@ -147,7 +148,7 @@ export default function Login({ onLogin, onSwitchToRegister, onForgotPassword }:
   const onSubmit = async (data: FormData) => {
     try {
       const res = await login(data);
-      
+
       // Check if 2FA is required
       if (res.data.needsTwoFactor) {
         onLogin(res.data);
@@ -354,6 +355,14 @@ export default function Login({ onLogin, onSwitchToRegister, onForgotPassword }:
             className="w-full mt-6 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 hover:shadow-lg hover:shadow-orange-500/20 transition-all disabled:opacity-50"
           >
             {isSubmitting ? '⏳ Signing in...' : 'Sign In →'}
+          </button>
+
+          <button
+            type="button"
+            onClick={onOtpLogin}
+            className="w-full mt-3 text-orange-400 hover:text-orange-300 text-xs font-semibold transition-colors"
+          >
+            Login with OTP instead →
           </button>
 
           <p className="text-center text-slate-300 text-xs mt-6">

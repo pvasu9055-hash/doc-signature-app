@@ -9,9 +9,10 @@ import ResetPassword from './components/ResetPassword';
 import Enable2FA from './components/Enable2FA';
 import VerifyTwoFactorSetup from './components/VerifyTwoFactorSetup';
 import VerifyTwoFactorLogin from './components/VerifyTwoFactorLogin';
+import OtpLogin from './components/OtpLogin';
 
 function App() {
-  const [view, setView] = useState<'login' | 'register' | 'dashboard' | 'sign' | 'public-sign' | 'forgot-password' | 'reset-password' | 'enable-2fa' | 'verify-2fa-setup' | 'verify-2fa-login'>('login');
+  const [view, setView] = useState<'login' | 'register' | 'dashboard' | 'sign' | 'public-sign' | 'forgot-password' | 'reset-password' | 'enable-2fa' | 'verify-2fa-setup' | 'verify-2fa-login' | 'otp-login'>('login');
   const [currentDocId, setCurrentDocId] = useState<number>(1);
   const [currentDocPath, setCurrentDocPath] = useState<string>('');
   const [publicToken, setPublicToken] = useState<string>('');
@@ -95,6 +96,19 @@ function App() {
             window.history.pushState({}, '', '/forgot-password');
             setView('forgot-password');
           }}
+          onOtpLogin={() => setView('otp-login')}
+        />
+      )}
+      {view === 'otp-login' && (
+        <OtpLogin
+          onSuccess={(token, userData) => {
+            setUser(userData);
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(userData));
+            window.history.pushState({}, '', '/');
+            setView('dashboard');
+          }}
+          onBack={() => setView('login')}
         />
       )}
       {view === 'register' && (

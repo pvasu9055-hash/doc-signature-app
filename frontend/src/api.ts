@@ -20,6 +20,12 @@ export const register = (data: { name: string; email: string; password: string }
 export const login = (data: { email: string; password: string }) =>
   API.post('/auth/login', data);
 
+export const requestLoginOtp = (data: { email: string }) =>
+  API.post('/auth/otp/request', data);
+
+export const verifyLoginOtp = (data: { email: string; otp: string }) =>
+  API.post('/auth/otp/verify', data);
+
 export const forgotPassword = (data: { email: string }) =>
   API.post('/auth/forgot-password', data);
 
