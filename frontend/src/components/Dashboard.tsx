@@ -279,23 +279,99 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
 
           {/* Profile Page */}
           {activePage === 'profile' && (
-            <div className="max-w-lg">
+            <div className="max-w-4xl">
               <h1 className="text-3xl font-black mb-8">👤 Profile</h1>
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center text-2xl font-black">
+
+              {/* Header Card */}
+              <div className="bg-gradient-to-br from-orange-500/10 to-red-500/5 border border-orange-500/20 rounded-2xl p-8 mb-6">
+                <div className="flex items-center gap-6">
+                  <div className="w-24 h-24 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center text-4xl font-black shadow-lg shadow-orange-500/20">
                     {user.name?.[0]?.toUpperCase() || 'U'}
                   </div>
-                  <div>
-                    <h2 className="text-xl font-black">{user.name}</h2>
-                    <p className="text-slate-400">{user.email}</p>
-                    <span className="text-orange-400 text-xs bg-orange-500/10 px-2 py-1 rounded-full">Free Plan</span>
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-black text-white">{user.name}</h2>
+                    <p className="text-slate-400 mt-1">{user.email}</p>
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-orange-400 text-xs font-semibold bg-orange-500/10 border border-orange-500/20 px-3 py-1 rounded-full">⭐ Free Plan</span>
+                      <span className="text-emerald-400 text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">✓ Verified</span>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <div className="bg-white/5 rounded-xl p-4"><p className="text-slate-400 text-xs">Full Name</p><p className="text-white font-semibold">{user.name}</p></div>
-                  <div className="bg-white/5 rounded-xl p-4"><p className="text-slate-400 text-xs">Email</p><p className="text-white font-semibold">{user.email}</p></div>
-                  <div className="bg-white/5 rounded-xl p-4"><p className="text-slate-400 text-xs">Documents</p><p className="text-white font-semibold">{documents.length} uploaded</p></div>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                {[
+                  { label: 'Total Docs', value: documents.length, icon: '📄', color: 'text-blue-400' },
+                  { label: 'Signed', value: documents.filter(d => d.status === 'signed').length, icon: '✅', color: 'text-emerald-400' },
+                  { label: 'Pending', value: documents.filter(d => d.status !== 'signed' && d.status !== 'rejected').length, icon: '⏳', color: 'text-orange-400' },
+                  { label: 'Rejected', value: documents.filter(d => d.status === 'rejected').length, icon: '❌', color: 'text-red-400' },
+                ].map((s) => (
+                  <div key={s.label} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                    <div className="text-2xl mb-1">{s.icon}</div>
+                    <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+                    <p className="text-slate-500 text-xs mt-1">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                {/* Account Details */}
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                  <h3 className="text-white font-bold mb-4 flex items-center gap-2">📋 Account Details</h3>
+                  <div className="space-y-3">
+                    <div className="bg-white/5 rounded-xl p-4">
+                      <p className="text-slate-400 text-xs mb-1">Full Name</p>
+                      <p className="text-white font-semibold">{user.name}</p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-4">
+                      <p className="text-slate-400 text-xs mb-1">Email Address</p>
+                      <p className="text-white font-semibold">{user.email}</p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-4">
+                      <p className="text-slate-400 text-xs mb-1">Plan</p>
+                      <p className="text-white font-semibold">Free Plan</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => alert('Profile editing is coming soon!')}
+                    className="w-full mt-4 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2.5 rounded-xl transition"
+                  >
+                    ✏️ Edit Profile
+                  </button>
+                </div>
+
+                {/* Security & Quick Links */}
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                  <h3 className="text-white font-bold mb-4 flex items-center gap-2">🔒 Security</h3>
+                  <div className="space-y-3">
+                    <div
+                      onClick={() => setActivePage('settings')}
+                      className="flex justify-between items-center bg-white/5 hover:bg-white/10 rounded-xl p-4 cursor-pointer transition"
+                    >
+                      <div>
+                        <p className="text-white text-sm font-semibold">Two-Factor Authentication</p>
+                        <p className="text-slate-500 text-xs mt-0.5">{settings.twoFA ? 'Enabled' : 'Not enabled'}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full ${settings.twoFA ? 'text-emerald-400 bg-emerald-400/10' : 'text-slate-400 bg-slate-500/10'}`}>
+                        {settings.twoFA ? '✓ On' : 'Off'}
+                      </span>
+                    </div>
+                    <div
+                      onClick={() => setActivePage('settings')}
+                      className="flex justify-between items-center bg-white/5 hover:bg-white/10 rounded-xl p-4 cursor-pointer transition"
+                    >
+                      <p className="text-white text-sm font-semibold">Notification Preferences</p>
+                      <span className="text-slate-500 text-xs">⚙️ Manage</span>
+                    </div>
+                    <div
+                      onClick={() => setActivePage('audit')}
+                      className="flex justify-between items-center bg-white/5 hover:bg-white/10 rounded-xl p-4 cursor-pointer transition"
+                    >
+                      <p className="text-white text-sm font-semibold">Activity & Audit Log</p>
+                      <span className="text-slate-500 text-xs">📋 View</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
