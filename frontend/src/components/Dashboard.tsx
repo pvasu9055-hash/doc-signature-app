@@ -89,6 +89,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
   const [activePage, setActivePage] = useState('dashboard');
   const [shareDoc, setShareDoc] = useState<any>(null);
   const [twoFASecret, setTwoFASecret] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('appSettings');
     return saved ? JSON.parse(saved) : { emailNotifs: true, darkMode: true, autoSave: true, twoFA: false };
@@ -138,6 +139,8 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
   };
 
   const filteredDocs = documents.filter(doc => {
+    const matchesSearch = doc.filename.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
     if (activeTab === 'all') return true;
     if (activeTab === 'pending') return doc.status !== 'signed' && doc.status !== 'rejected';
     if (activeTab === 'signed') return doc.status === 'signed';
@@ -176,7 +179,13 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
           <span className="font-black text-lg tracking-tight">DocSign</span>
         </div>
         <div className="flex items-center gap-3">
-          <input type="text" placeholder="🔍 Search documents..." className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-56 transition" />
+          <input
+            type="text"
+            placeholder="🔍 Search documents..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-56 transition"
+          />
           <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
           <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:opacity-90 transition shadow-lg shadow-orange-500/20 disabled:opacity-50">
             {uploading ? '⏳ Uploading...' : '+ Upload PDF'}
@@ -302,12 +311,17 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
                   { key: 'darkMode', label: 'Dark Mode' },
                   { key: 'autoSave', label: 'Auto-save Signatures' },
                   { key: 'twoFA', label: 'Two-Factor Auth (Click to Setup)' }
-                ].map((s) => (
-                  <div key={s.key} onClick={() => toggleSetting(s.key)} className="flex justify-between items-center p-4 bg-white/5 rounded-xl hover:bg-white/10 transition cursor-pointer">
-                    <span className="text-white text-sm font-medium">{s.label}</span>
-                    <div className={`w-10 h-5 rounded-full transition ${settings[s.key as keyof typeof settings] ? 'bg-orange-500' : 'bg-slate-600'}`}></div>
-                  </div>
-                ))}
+                ].map((s) => {
+                  const isOn = settings[s.key as keyof typeof settings];
+                  return (
+                    <div key={s.key} onClick={() => toggleSetting(s.key)} className="flex justify-between items-center p-4 bg-white/5 rounded-xl hover:bg-white/10 transition cursor-pointer">
+                      <span className="text-white text-sm font-medium">{s.label}</span>
+                      <div className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${isOn ? 'bg-orange-500' : 'bg-slate-600'}`}>
+                        <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${isOn ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -424,7 +438,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
                 <div className="flex justify-between items-center mb-6">
                   <div>
                     <h2 className="text-xl font-black">Your Documents</h2>
-                    <p className="text-slate-500 text-sm">{documents.length} total</p>
+                    <p className="text-slate-500 text-sm">{filteredDocs.length} {searchQuery ? `matching "${searchQuery}"` : 'total'}</p>
                   </div>
                   <div className="flex gap-2">
                     {['all', 'pending', 'signed', 'rejected'].map((tab) => (
@@ -443,11 +457,13 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
                 ) : filteredDocs.length === 0 ? (
                   <div className="text-center py-16">
                     <div className="text-5xl mb-4">📭</div>
-                    <h4 className="text-xl font-bold text-white mb-2">No Documents Yet</h4>
-                    <p className="text-slate-400 mb-6">Upload your first PDF to get started</p>
-                    <button onClick={() => fileInputRef.current?.click()} className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition">
-                      Upload Your First Document
-                    </button>
+                    <h4 className="text-xl font-bold text-white mb-2">{searchQuery ? 'No Matching Documents' : 'No Documents Yet'}</h4>
+                    <p className="text-slate-400 mb-6">{searchQuery ? `No documents match "${searchQuery}"` : 'Upload your first PDF to get started'}</p>
+                    {!searchQuery && (
+                      <button onClick={() => fileInputRef.current?.click()} className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition">
+                        Upload Your First Document
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
