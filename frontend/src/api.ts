@@ -26,6 +26,9 @@ export const forgotPassword = (data: { email: string }) =>
 export const resetPassword = (data: { token: string; newPassword: string }) =>
   API.post('/auth/reset-password', data);
 
+export const updateProfile = (data: { name: string; email: string }) =>
+  API.put('/auth/profile', data);
+
 export const uploadDocument = (formData: FormData) =>
   API.post('/docs/upload', formData);
 

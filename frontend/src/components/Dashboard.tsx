@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getDocuments, uploadDocument, BACKEND_URL } from '../api';
+import { getDocuments, uploadDocument, updateProfile, BACKEND_URL } from '../api';
 import ShareModal from './ShareModal';
 import Enable2FA from './Enable2FA';
 import VerifyTwoFactorSetup from './VerifyTwoFactorSetup';
@@ -90,12 +90,16 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
   const [shareDoc, setShareDoc] = useState<any>(null);
   const [twoFASecret, setTwoFASecret] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', email: '' });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState('');
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('appSettings');
     return saved ? JSON.parse(saved) : { emailNotifs: true, darkMode: true, autoSave: true, twoFA: false };
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
 
   useEffect(() => { fetchDocuments(); }, []);
 
@@ -135,6 +139,37 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const startEditingProfile = () => {
+    setProfileForm({ name: user.name || '', email: user.email || '' });
+    setProfileError('');
+    setEditingProfile(true);
+  };
+
+  const cancelEditingProfile = () => {
+    setEditingProfile(false);
+    setProfileError('');
+  };
+
+  const saveProfile = async () => {
+    setProfileError('');
+    if (!profileForm.name.trim() || !profileForm.email.trim()) {
+      setProfileError('Name and email cannot be empty.');
+      return;
+    }
+    setProfileSaving(true);
+    try {
+      const res = await updateProfile({ name: profileForm.name.trim(), email: profileForm.email.trim() });
+      const updatedUser = { ...user, name: res.data.user.name, email: res.data.user.email };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      setEditingProfile(false);
+    } catch (error: any) {
+      setProfileError(error.response?.data?.message || 'Failed to update profile. Please try again.');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -319,26 +354,71 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
                 {/* Account Details */}
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
                   <h3 className="text-white font-bold mb-4 flex items-center gap-2">📋 Account Details</h3>
-                  <div className="space-y-3">
-                    <div className="bg-white/5 rounded-xl p-4">
-                      <p className="text-slate-400 text-xs mb-1">Full Name</p>
-                      <p className="text-white font-semibold">{user.name}</p>
+
+                  {editingProfile ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-slate-400 text-xs mb-1">Full Name</label>
+                        <input
+                          type="text"
+                          value={profileForm.name}
+                          onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 text-xs mb-1">Email Address</label>
+                        <input
+                          type="email"
+                          value={profileForm.email}
+                          onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500 transition"
+                        />
+                      </div>
+                      {profileError && (
+                        <p className="text-red-400 text-xs">⚠️ {profileError}</p>
+                      )}
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={saveProfile}
+                          disabled={profileSaving}
+                          className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm font-semibold py-2.5 rounded-xl transition disabled:opacity-50"
+                        >
+                          {profileSaving ? 'Saving...' : '✓ Save Changes'}
+                        </button>
+                        <button
+                          onClick={cancelEditingProfile}
+                          disabled={profileSaving}
+                          className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2.5 rounded-xl transition disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
-                    <div className="bg-white/5 rounded-xl p-4">
-                      <p className="text-slate-400 text-xs mb-1">Email Address</p>
-                      <p className="text-white font-semibold">{user.email}</p>
-                    </div>
-                    <div className="bg-white/5 rounded-xl p-4">
-                      <p className="text-slate-400 text-xs mb-1">Plan</p>
-                      <p className="text-white font-semibold">Free Plan</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => alert('Profile editing is coming soon!')}
-                    className="w-full mt-4 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2.5 rounded-xl transition"
-                  >
-                    ✏️ Edit Profile
-                  </button>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        <div className="bg-white/5 rounded-xl p-4">
+                          <p className="text-slate-400 text-xs mb-1">Full Name</p>
+                          <p className="text-white font-semibold">{user.name}</p>
+                        </div>
+                        <div className="bg-white/5 rounded-xl p-4">
+                          <p className="text-slate-400 text-xs mb-1">Email Address</p>
+                          <p className="text-white font-semibold">{user.email}</p>
+                        </div>
+                        <div className="bg-white/5 rounded-xl p-4">
+                          <p className="text-slate-400 text-xs mb-1">Plan</p>
+                          <p className="text-white font-semibold">Free Plan</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={startEditingProfile}
+                        className="w-full mt-4 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2.5 rounded-xl transition"
+                      >
+                        ✏️ Edit Profile
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {/* Security & Quick Links */}
