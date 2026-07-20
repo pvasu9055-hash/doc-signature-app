@@ -10,13 +10,15 @@ import Enable2FA from './components/Enable2FA';
 import VerifyTwoFactorSetup from './components/VerifyTwoFactorSetup';
 import VerifyTwoFactorLogin from './components/VerifyTwoFactorLogin';
 import OtpLogin from './components/OtpLogin';
+import SignMultiPage from './components/SignMultiPage';
 
 function App() {
-  const [view, setView] = useState<'login' | 'register' | 'dashboard' | 'sign' | 'public-sign' | 'forgot-password' | 'reset-password' | 'enable-2fa' | 'verify-2fa-setup' | 'verify-2fa-login' | 'otp-login'>('login');
+  const [view, setView] = useState<'login' | 'register' | 'dashboard' | 'sign' | 'public-sign' | 'forgot-password' | 'reset-password' | 'enable-2fa' | 'verify-2fa-setup' | 'verify-2fa-login' | 'otp-login' | 'sign-multi'>('login');
   const [currentDocId, setCurrentDocId] = useState<number>(1);
   const [currentDocPath, setCurrentDocPath] = useState<string>('');
   const [publicToken, setPublicToken] = useState<string>('');
   const [publicDocId, setPublicDocId] = useState<string>('');
+  const [multiSignToken, setMultiSignToken] = useState<string>('');
   const [user, setUser] = useState<any>(null);
   const [twoFactorSetup, setTwoFactorSetup] = useState<{ userId: number; secret: string } | null>(null);
   const [twoFactorLoginUserId, setTwoFactorLoginUserId] = useState<number | null>(null);
@@ -24,6 +26,15 @@ function App() {
   useEffect(() => {
     const path = window.location.pathname;
     const params = new URLSearchParams(window.location.search);
+
+    if (path.startsWith('/sign-multi/')) {
+      const token = path.replace('/sign-multi/', '');
+      if (token) {
+        setMultiSignToken(token);
+        setView('sign-multi');
+        return;
+      }
+    }
 
     if (path.startsWith('/sign/')) {
       const token = path.replace('/sign/', '');
@@ -85,6 +96,9 @@ function App() {
 
   return (
     <>
+      {view === 'sign-multi' && (
+        <SignMultiPage token={multiSignToken} />
+      )}
       {view === 'public-sign' && (
         <PublicSignPage token={publicToken} docId={publicDocId} />
       )}

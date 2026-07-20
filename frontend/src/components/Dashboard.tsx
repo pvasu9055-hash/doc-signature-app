@@ -3,6 +3,7 @@ import { getDocuments, uploadDocument, updateProfile, BACKEND_URL } from '../api
 import ShareModal from './ShareModal';
 import Enable2FA from './Enable2FA';
 import VerifyTwoFactorSetup from './VerifyTwoFactorSetup';
+import AddSignersModal from './AddSignersModal';
 
 function AuditTrailPage({ documents, formatDate }: { documents: any[], formatDate: (d: string) => string }) {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -80,6 +81,37 @@ function AuditTrailPage({ documents, formatDate }: { documents: any[], formatDat
   );
 }
 
+type ToastType = 'success' | 'error' | 'info';
+interface Toast {
+  id: number;
+  message: string;
+  type: ToastType;
+}
+
+function ToastContainer({ toasts }: { toasts: Toast[] }) {
+  const iconFor = (type: ToastType) => type === 'success' ? '✅' : type === 'error' ? '⚠️' : 'ℹ️';
+  const colorFor = (type: ToastType) =>
+    type === 'success'
+      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+      : type === 'error'
+        ? 'bg-red-500/10 border-red-500/30 text-red-300'
+        : 'bg-blue-500/10 border-blue-500/30 text-blue-300';
+
+  return (
+    <div className="fixed top-20 right-6 z-[100] flex flex-col gap-2 w-80">
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          className={`border rounded-xl px-4 py-3 shadow-2xl backdrop-blur-xl flex items-start gap-2 animate-[fadeIn_0.2s_ease-out] ${colorFor(t.type)}`}
+        >
+          <span className="text-sm">{iconFor(t.type)}</span>
+          <p className="text-sm flex-1">{t.message}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (docId: number, filepath: string) => void, onLogout: () => void }) {
   const [documents, setDocuments] = useState<any[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
@@ -88,18 +120,28 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
   const [activeTab, setActiveTab] = useState('all');
   const [activePage, setActivePage] = useState('dashboard');
   const [shareDoc, setShareDoc] = useState<any>(null);
+  const [signersDoc, setSignersDoc] = useState<any>(null);
   const [twoFASecret, setTwoFASecret] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', email: '' });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState('');
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('appSettings');
     return saved ? JSON.parse(saved) : { emailNotifs: true, darkMode: true, autoSave: true, twoFA: false };
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
+
+  const showToast = (message: string, type: ToastType = 'info') => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3500);
+  };
 
   useEffect(() => { fetchDocuments(); }, []);
 
@@ -133,9 +175,9 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
       formData.append('pdf', file);
       await uploadDocument(formData);
       await fetchDocuments();
-      alert('✅ PDF uploaded successfully!');
+      showToast('PDF uploaded successfully!', 'success');
     } catch (error) {
-      alert('❌ Upload failed!');
+      showToast('Upload failed. Please try again.', 'error');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -166,6 +208,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
       localStorage.setItem('user', JSON.stringify(updatedUser));
       setUser(updatedUser);
       setEditingProfile(false);
+      showToast('Profile updated successfully!', 'success');
     } catch (error: any) {
       setProfileError(error.response?.data?.message || 'Failed to update profile. Please try again.');
     } finally {
@@ -207,6 +250,8 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
 
+      <ToastContainer toasts={toasts} />
+
       {/* Navbar */}
       <nav className="fixed top-0 w-full flex justify-between items-center px-8 py-3 bg-black/70 backdrop-blur-xl border-b border-white/10 z-50">
         <div className="flex items-center gap-2">
@@ -244,7 +289,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
               setActivePage(item.key);
               if (item.key === 'sign') {
                 if (documents.length > 0) onOpenEditor(documents[0].id, documents[0].filepath);
-                else alert('Please upload a document first!');
+                else showToast('Please upload a document first!', 'info');
               }
               if (item.key === 'documents') setActiveTab('all');
             }}
@@ -504,7 +549,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
                       </p>
                       <div className="flex items-center gap-2">
                         <p className="text-blue-400 text-xs break-all flex-1 bg-white/5 rounded-lg px-3 py-2">{item.link}</p>
-                        <button onClick={() => { navigator.clipboard.writeText(item.link); alert('🔗 Link copied!'); }} className="bg-white/10 text-white px-3 py-2 rounded-lg text-xs hover:bg-white/20 transition whitespace-nowrap">📋 Copy</button>
+                        <button onClick={() => { navigator.clipboard.writeText(item.link); showToast('Link copied to clipboard!', 'success'); }} className="bg-white/10 text-white px-3 py-2 rounded-lg text-xs hover:bg-white/20 transition whitespace-nowrap">📋 Copy</button>
                       </div>
                     </div>
                   ))}
@@ -575,13 +620,13 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
                   <h3 className="text-white font-bold mt-3">Upload Document</h3>
                   <p className="text-slate-400 text-sm mt-1">Add a new PDF to sign</p>
                 </div>
-                <div onClick={() => { if (documents.length > 0) { const target = selectedDoc || documents[0]; onOpenEditor(target.id, target.filepath); } else alert('Please upload a document first!'); }}
+                <div onClick={() => { if (documents.length > 0) { const target = selectedDoc || documents[0]; onOpenEditor(target.id, target.filepath); } else showToast('Please upload a document first!', 'info'); }}
                   className="bg-gradient-to-br from-blue-500/20 to-cyan-500/10 border border-blue-500/20 rounded-2xl p-5 cursor-pointer hover:scale-[1.02] transition">
                   <span className="text-3xl">✍️</span>
                   <h3 className="text-white font-bold mt-3">Sign Document</h3>
                   <p className="text-slate-400 text-sm mt-1">{selectedDoc ? `Sign: ${selectedDoc.filename.slice(0, 20)}...` : 'Click to sign latest doc'}</p>
                 </div>
-                <div onClick={() => { if (documents.length > 0) setShareDoc(selectedDoc || documents[0]); else alert('Please upload a document first!'); }}
+                <div onClick={() => { if (documents.length > 0) setShareDoc(selectedDoc || documents[0]); else showToast('Please upload a document first!', 'info'); }}
                   className="bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/20 rounded-2xl p-5 cursor-pointer hover:scale-[1.02] transition">
                   <span className="text-3xl">🔗</span>
                   <h3 className="text-white font-bold mt-3">Share Link</h3>
@@ -646,6 +691,7 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
                             <button onClick={(e) => { e.stopPropagation(); window.open(`${BACKEND_URL}/${doc.filepath}`, '_blank'); }} className="bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-white/20 transition">👁 View</button>
                             <button onClick={(e) => handleSignClick(e, doc.id, doc.filepath)} className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:opacity-90 transition">✍️ Sign</button>
                             <button onClick={(e) => { e.stopPropagation(); setShareDoc(doc); }} className="bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-white/20 transition">🔗 Share</button>
+                            <button onClick={(e) => { e.stopPropagation(); setSignersDoc(doc); }} className="bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-white/20 transition">👥 Add Signers</button>
                             <button onClick={(e) => { e.stopPropagation(); window.open(`${BACKEND_URL}/${doc.signedFilepath || doc.filepath}`, '_blank'); }} className="bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-white/20 transition">⬇️ {doc.signedFilepath ? '📄 Signed PDF' : 'Download'}</button>
                           </div>
                         </div>
@@ -664,6 +710,18 @@ export default function Dashboard({ onOpenEditor, onLogout }: { onOpenEditor: (d
           documentId={shareDoc.id}
           filename={shareDoc.filename}
           onClose={() => setShareDoc(null)}
+        />
+      )}
+
+      {signersDoc && (
+        <AddSignersModal
+          documentId={signersDoc.id}
+          filename={signersDoc.filename}
+          onClose={() => setSignersDoc(null)}
+          onSuccess={() => {
+            showToast('Signing requests sent!', 'success');
+            fetchDocuments();
+          }}
         />
       )}
     </div>

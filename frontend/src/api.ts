@@ -20,12 +20,6 @@ export const register = (data: { name: string; email: string; password: string }
 export const login = (data: { email: string; password: string }) =>
   API.post('/auth/login', data);
 
-export const requestLoginOtp = (data: { email: string }) =>
-  API.post('/auth/otp/request', data);
-
-export const verifyLoginOtp = (data: { email: string; otp: string }) =>
-  API.post('/auth/otp/verify', data);
-
 export const forgotPassword = (data: { email: string }) =>
   API.post('/auth/forgot-password', data);
 
@@ -35,6 +29,12 @@ export const resetPassword = (data: { token: string; newPassword: string }) =>
 export const updateProfile = (data: { name: string; email: string }) =>
   API.put('/auth/profile', data);
 
+export const requestLoginOtp = (data: { email: string }) =>
+  API.post('/auth/otp/request', data);
+
+export const verifyLoginOtp = (data: { email: string; otp: string }) =>
+  API.post('/auth/otp/verify', data);
+
 export const uploadDocument = (formData: FormData) =>
   API.post('/docs/upload', formData);
 
@@ -43,5 +43,11 @@ export const getDocuments = () =>
 
 export const getDocument = (id: number) =>
   API.get(`/docs/${id}`);
+
+export const addSigners = (documentId: number, signers: { name: string; email: string }[]) =>
+  API.post(`/signers/${documentId}`, { signers });
+
+export const getSigners = (documentId: number) =>
+  API.get(`/signers/${documentId}`);
 
 export const BACKEND_URL = BASE_URL;
